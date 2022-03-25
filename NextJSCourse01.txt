@@ -1,0 +1,402 @@
+				CURSO NEXT-JS EN TYPESCRIPT BY FERNANDO HERRERA
+
+NOTA: la cascada en CSS va acompañada de la especificidad.A igual especificidad se aplicarán los estilos que estén más abajo,pero si se apuntará con diferente especificidad primero entraría ésta,antes que la cascada.
+
+h2{
+ font-size:10px
+}
+h2{
+font-size:15px <- dado que la especificidad es la misma entra la cascada
+
+body>h2{
+font-size:15px <- dado que este selector es más especifico se aplica éste
+
+h2{
+ font-size:10px
+
+Recuerda que puedo obligar a que se hereden propiedades como padding,border o width con el valor de inherit.Obviamente las propiedades que se heredan por defecto(como font-size o font-family las puedo cambiar sobrescribiendolas.
+Para que un elemento se centre debe tener display block(no vale inline-block) y un width definido.
+Sintaxis de un box-shadow:
+.box {
+  box-shadow: h-offset v-offset blur spread color
+}
+H-offset significa que tanto se va a desplazar la sombra en la horizontal
+v-offset significa que tanto se va a desplazar la sombra en la vertical
+blur es que tanto se va a difuminar
+spread es que tanto se va a esparcir(fijate que es blur spread,por eso suelo ignorar la cuarta propiedad)
+color: obviamente el color de la sombra
+box-shadow: 2px 5px <- realmente solo necesito el h-offset y el vertical-offset,el blur y spread por defecto son 0 y el color es 'currentColor'.CurrentColor es como una variable,y por defecto es negro. 
+
+* La sombra es una copia exacta del tamaño y de la forma del elemento con ella(si el elemento tiene un border-radius la sombra lo tendrá,etc).Esto es importante,pero lo puedo sobrescribir con el spread(spread expande la sombra,aunque esté haciendo la sombra a un div de 100x100 puedo usar un spread de 20px para aumentar la sombra a un div de 120x120.Y es por esto que no se suele tocar,normalmente no se agranda el tamaño de la sombra	
+Recuerda que puedo concatenar sombras separandolas por una coma:
+box-shadow: 100px 100px 0 0 crimsom, 100px 0 0 0 darkblue; <- dos sombras
+IMPORTANTE: en las sombras no se suelen usar colores puros,normalmente se usan colores con opacidad como rgba(6,24,126,0.5) 
+
+TIP:cuando trabaje con imagenes sin fondo puedo usar la propiedad filter con el método drop-shadow para darle sombra sólo a la imagen y no al contenedor de la imagen.Ésta es la sintaxis:
+.goku {
+   filter: drop-shadow(h-offset v-offset blur color) <- obviamente no tengo spread porque no puede calcular el resize de la imagen.Fijate que es un método.(aprender más sobre filter.
+NOTA:puedo quitar el fondo a imagenes,para poder aplicar este filter,con cualquier herramienta online para ello(como remove.bg)
+NOTA:fijate que puedo comprar el curso con Udemy Business de AlexCGDesign
+
+					SECCION UNO
+
+Esta es nuestra primera sección en la cual empezaremos a trabajar con Next.js, la cual es quizá la más importante de todas si estamos comenzando con este framework.
+
+Puntualmente veremos:
+1- Exposición sobre ¿Qué es Next.js?
+2- Crear nuestro primer proyecto
+3- Exposición sobre cada archivo y directorio
+4- Componentes propios de Next (Link, Head)
+5- Módulos de CSS y estilos globales
+6- Páginas
+7- API generada por defecto
+8- Aplicar estilos basados en rutas
+9- Layouts
+10- Layouts anidados
+
+Y más...
+
+				EXPOSICIÓN INTRODUCTORIA A NEXT.JS
+
+Next es un framework para servir contenido estático y generado desde el lado del servidor.
+Es SEO friendly,optimiza imagenes,etc
+Permite usar SSR y/o SSG(Static Site Generation).Un sitio static-site es un sitio que ofrece el mismo contenido una vez se hace el build.El SSR y el SSG realmente los puedo mezclar
+También ofrece el CSR(Client Site Rendering) que es lo que hace React o Vite.
+También ofrece el ISR(Incremental Static Regeneration).El ISR es muy parecido al SSG,se usa al agregar algo a un Sitio estático,para no tener que retocar todo.
+Por último tiene DR(Dynamic Routing)
+
+NOTA: un SPA es considerado como NO-SEO-friendly.Fijate que puedo ayudar a los bots de Google cuando quiera que no indexen mi web más(debería hacerlo).
+
+			VIDEO 09 CREANDO MI PRIMER PROYECTO
+
+La documentación del framework la tengo aqui(https://nextjs.org/).La dejo en assets,fijate que siempre debo tener la documentación a mano.
+
+La forma más fácil de comenzar es con yarn create next-app (--typescript).Fijate en el espacio entre create y next-app,esto es porque usé yarn.
+Si uso npx es npx create-next-app@latest --typescript(si quiero TS).Recuerda instalar yarn con npm i -g yarn
+
+Fijate que Fernando tuvo problemas con el módulo autoprefixer y tuvo que configurar a postcss pasandole el plugin.En mi caso no sucedió
+
+				VIDEO 10 PRIMEROS PASOS
+
+NOTA: es obligatorio que las paginas sean functional components con la exportación por default.Esto lo puedo ver ya en pages/index.js:
+
+export default function Home(){}
+
+Otra cosa que puedo notar es que no tiene nada que ver el nombre del componente(Home) con el nombre del archivo.Perfectamente se podría llamar Alberto el componente que lo que importa es el nombre y ubicación del archivo
+
+IMPORTANTE: los nombres de los archivos van en minúsculas también(no puedo llamarlo Index.js tiene que ser index.js).Sin embargo,si que puedo llamarlo index.jsx para ayudarme con el Intellisense,etc..(importante).
+Si bien en React si se capitaliza el nombre del archivo en Next es obligatorio que empiecen por minuscula.El nombre del archivo creará la ruta(siempre que sea un archivo que está en pages/*)
+
+NOTA: si abro una aplicación de Next desde afuera de la carpeta me puede dar un error que no encuentra next/babel.Hay que agregar esto al eslintrc.json:
+{
+  "extends": ["next/babel","next/core-web-vitals"]
+}
+Esto sólo sucede cuando no abra el IDE desde el root del proyecto como en un monorepo multiproyecto.
+
+				VIDEO 11 ESTRUCTURA DE UN PROYECTO NEXT
+
+La primera carpeta importante es la oculta '.next'.Este directorio es imprescindilbe y si no lo tuviera porque cloné un repo,por ejemplo,un simple yarn dev la reconstruirá(o un yarn build también,aunque creará otro contexto).
+
+La segunda carpeta por orden sería node_modules.Fijate que muchos módulos pueden ser para desarrollo asi que diferirá de la que termine en el servidor.
+
+La tercera carpeta es pages.Aqui cualquier archivo creará una url,siguiendo la sintaxis de Next(minusculas,export default,)
+
+La cuarta carpeta es public.Aqui puedo meter estáticos como imagenes,fuentes,iconos,...Fijate que está carpeta no será compilada,simplemente será servido su contenido desde la carpeta.
+
+La siguiente carpeta es 'styles'.Son los archivos de estilos de mi aplicación.Rápidamente podré ver que está el globals.css y el Home.module.css,identificando que tengo dos formas de trabajar con css,la normal(.css) y cssModules(Home.module.css).
+Cabe destacar que los modules tienen que terminar en .module.css y que se usa Home para especificar que pertenece a ese componente,pero tanto este nombre como el de globals podrían ser otros
+
+El resto son archivos de configuración, eslintrc.json para el linter,.gitignore, next.config.js para Next,el package.json para el proyecto npm,etc...
+
+Puedo usar [1,2,3].at(-1) para acceder a la última posición.
+
+			VIDEO 12 COMPONENTE NEXT/HEAD
+
+El <Head> es un componente especial de Next que puedo usar en cada página y cambiará el html del <head> en esa página.Esto mejora el SEO,ya que los bots penalizan las SPA.
+NOTA: el componente <Head> de Next no reemplaza al <head> de html.Simplemente agrega a la tag <head> lo que ponga en código en ese componente <Head>.
+
+Puedo tener múltiples <Head>,incluso en el mismo componente:
+      <Head>
+        <title>About - Next Rocks</title>
+        <meta name="description" content="Home Page" />
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
+      <Head>
+        <title>About2 - Next Rocks</title>
+        <meta name="description" content="About Page" />
+      </Head>
+Lógicamente por cascada sobreescribiré la <meta name="description> y el <title>
+
+NOTA: Next desde la version 12 cambió el compilador.Ya no usa Babel,usa Rust lo cual da velocidades de hasta 5x más rápido.Esta versión salió en October,2021 y también trae compatibilidad para React18 y sus server components o el módulo Middleware,aparte del Rust Compiler
+
+		VIDEO 13 STATIC GENERATION VS SERVER-SIDE RENDERING
+
+Debo tener bien claro estos dos términos.Next tiene dos formas de pre-rendering.La diferencia entre ellas está en CUANDO SE GENERA EL HTML DE LA PAGINA:
+
+Static Generation(Recommended): El HTML es generado en built time y será reusado en cada request
+Server-side Rendering: el HTML es generado en cada request.
+
+Next me permite elegir que pre-rendering elegir.Puedo incluso elegir Static Genertation para ciertas páginas y elegir Server-side Rendering para otras en las que pueda ser más adecuado
+
+NOTA: Fijate que Next por defecto va a usar Static Generation.
+
+NOTA:cuando tengo una pagina del tipo:saco el id de la ruta,busco en la BD y devuelvo ese registro hay es cuando debo usar ServerSideRendering(rutas dinámicas con peticiones).NO tiene sentido usar el caché ya que cada producto cambiará(tipica pagina de vista de UN Producto).
+Otra página que su contenido no cambie debo usar la cache usando Static Generation.
+IMPORTANTE: Next sabe que estrategia usar en base a funciones que usaremos muy pronto(getServerSideProps??).Ya lo veré.
+
+Es importante comprender que Next funciona sin Javascript(puedo quitarlo momentáneamente).Esto mejora el SEO,ya que los bots de Google bonifican esto,no tener que leer javascript para poder ver algo.Amazon es un claro ejemplo de esto,y por el contrario una App de React caerá completamente al desactivar Javascript,penalizandola por ello
+
+			VIDEO 14 COMPONENTE NEXT/LINK
+
+Este video es muy importante.Cada vez que navego puedo notar que sucede un full refresh.Esto es porque estoy usando una etiqueta <anchor>.Nunca debo usar esta etiqueta.
+
+ {/* Ir a <a href="/about">About</a> */}
+ Ir a <Link href="/about">About</Link> 
+
+NOTA: Next precargará cualquier <Link< que esté en el viewport(aunque tuviera que hacer scroll) en un segundo plano,haciendo la navegación instantánea.Esto lo puedo desactivar con la propiedad prefetch:boolean de ese componente Link
+
+ Ir a <Link href="/about" prefetch="false">About</Link> 
+Por defecto estará habilitado al estar en true.
+Otra opción que debo manejar es la propiedad replace:boolean.Por defecto está en false,con lo que crea entradas en el historial de urls.Es muy útil cuando se navega al 404 no querer guardar esa entrada en el historial para ello hay que usar esta propiedad:
+<Link href="/home" replace>Volver al Home</Link> <- desde la pag de error.
+También se usa para que no pueda regresar al Login tras una autenticación exitosa.
+NOTA:los componentes de React deben estar lo más limpios posibles de lógica.No es buena idea hacer un fetch en el useEffect.Es mejor crear un service con la lógica.De esta manera,no sólo dejo libre el componente,que no necesita saber si uso fetch o axios,solo necesita saber que esa funcion le devolverá la data.
+Además,abstraerla en ese servicio me permite reutilizarla en cualquier otro componente o cambiarle la lógica en un futuro(cambiar a axios,etc).Desde luego son importantes,si.Mañana practicar con ello.
+
+			VIDEO 15 COMPONENTES PERSONALIZADOS
+
+IMPORTANTE: fijate que si quisiera crear un componente no lo puedo crear en pages/* ya que estaría creando una página.Debo crear el folder components 
+Bien,si nos fijamos el pages/index.jsx y pages/about.jsx tienen casi el mismo código.Esto es mala práctica,pues estoy repitiendo código.Lo ideal es que cada componente tenga lógica diferente y no lo que tengo ahora.
+Para resolver esto entra el concepto de Next llamado Layouts que veremos en breve
+
+			VIDEO 16 BARRA DE NAVEGACIÓN PERSONALIZADA	
+
+IMPORTANTE: esta navbar está mal,no debería usar <anchor> tags en Next.Debería usar su Link para que haga el pre-fetch de los componentes a los que redireccione:
+    <nav>
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+    </nav>
+
+Debo dejarlo asi:
+    <nav>
+      <Link href="/">Home</Link>
+      <Link href="/about">About</Link>
+      <Link href="/contact">Contact</Link>
+    </nav>
+
+NOTA: entre las caracteristicas que tienen los Links es que no puedo estilizarlosEs un componente que me entrega Next sin esta feature.Sin embargo,si quisiera podría pasarle una <anchor> tag como hija y estilizar a esta etiqueta.
+
+<Link href="/about">
+  <a style={{ marginRight: '10px' }}>About</a>
+</Link>
+* Además,debo recordar que Link necesita de la prop href,asi que puedo dejar de usarla en la tag anchor
+
+Bien,volviendo al tema,podría parecer que pudiera enlazar a este archivo un simple navbar.css con por ejemplo esta regla:
+a {
+ margin-right: 10px;
+}
+Sin embargo veré el error que dice que solo el _app.js puede importar archivos css globales.
+IMPORTANTE:Next me obliga a trabajar con archivos .module.css a excepción del file _app.js que si puede importar un .css a secas.
+
+Bien,si ahora usará esa nomenclatura veré que aún me da otro error(selector "a" is not pure).
+IMPORTANTE: un selector puro debe apuntar a una clase o un id(no puedo apuntar a una tag)
+Si además le doy este nombre a la clase Css:
+.menu-container a {
+  margin-right:10px;
+}
+fijate que esto no es un nombre válido en Javascript:
+<nav className={styles['menu-container']}> <- no puedo usar styles.menu-container pues estoy en Javascript(pero si que puedo usar una propiedad computada)
+Es realmente una propiedad computada??
+
+				VIDEO 17 CUSTOM ACTIVE LINK
+
+Si voy a la documentación veré que no tengo ninguna propiedad estilo activeClassName con lo que habrá que hacerlo manualmente.Como es algo que vamos a repetir ya que tengo tres Links crearemos un componente llamado ActiveLink.
+
+NOTA:fijate como se suele usar Link+a para tener lo mejor de los dos.El pre-fetch del LInk y la posibilidad de estilizar el ancla:
+
+const style = {
+  color: '#0070f3',
+  textDecoration: 'underline'
+}
+
+export const ActiveLink = ({ text, href }) => {
+  return (
+    <Link href={href}>
+      <a style={style}>{text}</a>
+    </Link>
+  )
+Fijate que la solución es realmente simple,ya que siempre puedo saber la ruta actual,en este caso con el hook useRouter:
+  const router = useRouter();
+  const path = router.pathname;  
+
+  return (
+    <Link href={href}>
+      <a style={ path === href ? style : null}>{text}</a>
+    </Link>
+  )
+Esto podría aplicarlo a cualquier framework,realmente no necesito una clase activeClassName para nada
+Por último fijate que Fernando tiene razón cuando dice que en vez de crear archivos pages/about.js o pages/contact.js puedo crear una carpeta pages/about o pages/contact y meter un index.js alli.
+Esto es muy útil,ya que puede ser que tenga diferentes páginas como /contact y /contact/user o contact/home.Creando una carpeta podré meter estos tres files en ella.Hacer caso a Fernando
+
+					VIDEO 18 LAYOUTS
+
+En Next un layout es un simple functional component que recibe un children.
+Recuerda que un HOC no es más que HTML que recibe otro HTML como hijo,es decir un Componente JSX(o varios).
+
+<MainLayout>
+  <Component />
+</MainLayout> <- MainLayout es un HOC,pues recibe a Componente
+
+IMPORTANTE: puede parecer que esto
+<MainLayout page="Home">
+y esto
+<MainLayout page={"Home"}>
+es lo mismo,pero en el primero no va a entrar el framework,mientras que el segundo es Javascript y va a entrar Next a interpretarlo.Si bien estamos usando Static Generation y nos da igual,está página haria el pre-fetch si uso page={"Home"}
+
+Por lo demás quedará asi:
+   <MainLayout page={'contact'}>
+
+      <h1 className={'title'}>
+        Ir a <Link href='/'>Home</Link>
+      </h1>
+
+      <p className={'description'}>
+        Get started by editing{' '}
+        <code className={'code'}>pages/contact.js</code>
+      </p>
+    </MainLayout>
+
+			VIDEO 20 MULTIPLES LAYOUTS ANIDADOS
+
+Es muy común trabajar con más de un Layout.Asi que vamos a crear otro.Inclusive se pueden crear Layouts anidados(un Layout que internamente tiene otro Layout).
+
+Fijate que simple va a ser este layout que pone el fondo a un 30% opacidad:
+const DarkLayout = ({ children }) => {
+  return (
+    <div
+      style={{
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        padding: 10,
+        borderRadius: 5,
+      }}>
+      <div>
+        {children}
+      </div>
+    </div>
+  )
+}
+export { DarkLayout }
+
+Ahora ya puedo englobar cualquier componente con este otro Layout:
+export default function About() {
+  return (
+    <MainLayout page={'about'}>
+      <DarkLayout>
+
+        <h1 className={'title'}>
+          Ir a <Link href='/'>Home</Link>
+        </h1>
+
+        <p className={'description'}>
+          Get started by editing{' '}
+          <code className={'code'}>pages/about.js</code>
+        </p>
+      </DarkLayout>
+    </MainLayout>
+  );
+}
+Fijate como estamos usando dos Layouts,podria usar los que quisiera,es un simple HOC más.Sin embargo,hay otra forma de realizar esto,usando el prototype del componente para agregarle una función nueva como propiedad:
+
+About.getLayout = function getLayout(page) {
+   return (
+    <MainLayout>
+      <DarkLayout>
+        {page}
+      </DarkLayout>
+    </MainLayout>
+  )
+}
+
+Ahora puedo ir al _app.js y revisar en el componente que se está queriendo renderizar o generar si tiene ese método,gracias a que esta función iterará por todos los componentes de la App,algo bastante útil,como puedo observar:
+
+function MyApp({ Component, pageProps }) {
+  /* buscar por la funcion getLayout en cada componente.Si no la tiene simplemente devuelves la página(no hagas nada) */
+  const getLayout = Component.getLayout || ((page) => page);
+
+  return getLayout(<Component {...pageProps} />,'about');
+
+NOTA DE LA DOC: este proceso se llama reconciliation y mediante este getLayout puedo persistir el state(input values,scroll position).Esto es asi porque Reacst mantiene el arbol de componentes entre el cambio de páginas:
+
+Con Typescript cambia un poco:
+
+import type { ReactElement } from 'react';
+
+Page.getLayout = function getLayout(page: ReactElement) {
+  return (
+    <Layout>
+      <NestedLayout>{page}</NestedLayout>
+    </Layout>
+  )
+}
+
+Y en el _app.js hay que usar algunas intersecciones,para añadir a las interfaces NextPage y AppProps esté metodo getLayout que añadimos al prototype:
+
+import type { ReactElement, ReactNode } from 'react'
+import type { NextPage } from 'next'
+import type { AppProps } from 'next/app'
+
+type NextPageWithLayout = NextPage & {
+  getLayout?: (page: ReactElement) => ReactNode
+}
+
+type AppPropsWithLayout = AppProps & {
+  Component: NextPageWithLayout
+}
+
+export default function MyApp({ Component, pageProps }: AppPropsWithLayout) {
+  // Use the layout defined at the page level, if available
+  const getLayout = Component.getLayout ?? ((page) => page)
+
+  return getLayout(<Component {...pageProps} />)
+}
+Puedo ver que queda muy claro todo y es una gran aproximación.
+
+				VIDEO 21-22 RESUMEN DE LA SECCIÓN
+
+recuerda que una página en Next puede haber sido previamente generada,mediante Static Generation(todo lo que hemos hecho hasta ahora es Static Generation).Ya veremos como pasar de aqui.
+Si hago el yarn build puedo ver estos simbolos:
+
+λ  (Server)  server-side renders at runtime (uses getInitialProps or getServerSideProps)
+○  (Static)  automatically rendered as static HTML (uses no initial props)
+
+Lo que tenga el simbolo de lambda son páginas,endpoints,etc que va a ser ejecutado de lado del servidor cuando se haga una solicitud(esto es SSR,ya que se esta srirviendo antes en el Servidor)
+Los que tengan el simbolo O significa que fue generado de manera estática.Al ser generado de manera estática TAMBIÉN FUE GENERADO ANTES DE QUE LA PERSONA HAGA LA SOLICITUD,ya están creadas y van a ser servidas de manera estática.
+
+IMPORTANTE: si tras hacer ese build voy a la carpeta .next/server/pages veré a contact.html | index.html | about.html ,observando que realmente ya están los archivos ahi,y no tienen que generarse
+
+○ /404                                   194 B          71.1 kB
+├ ○ /about                                 502 B            74 kB
+├ λ /api/hello                             0 B              71 kB
+├ ○ /contact                               401 B          73.9 kB
+└ ○ /pricing                               532 B          74.1 kB
+Todas las que tienen un circulo tendrán su estático(.html) tras hacerse el build en .next/server/pages.
+Desde luego es un framework sumamente interesante.En la siguiente sección migraremos esta app a Typescript y la desplegaremos con Docker.
+
+		SECCION 03 NEXT CON TYPESCRIPT + DESPLIEGUE CON DOCKER
+
+En esta sección veremos como desplegar nuestra aplicación de Next en distintos lugares.
+
+Puntualmente veremos:
+
+1- Convertir una aplicación de Next.js en JavaScript a TypeScript
+2- Generar el build de producción / distribución
+3- Desplegar la aplicación en Vercel (Creado por la misma gente de Next.js)
+4- Generar una imagen de Docker
+5- Crear la imagen de Docker siguiendo las prácticas recomendadas por Next
+6- Correr la aplicación desde Docker Desktop
+
+			VIDEO 27 MIGRANDO DE JAVASCRIPT A TYPESCRIPT
+
+
+
