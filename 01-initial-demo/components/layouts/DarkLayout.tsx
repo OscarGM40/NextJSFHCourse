@@ -1,6 +1,6 @@
 
 
-const DarkLayout = ({ children }) => {
+const DarkLayout: React.FC = ({children}) => {
   return (
     <div
       style={{

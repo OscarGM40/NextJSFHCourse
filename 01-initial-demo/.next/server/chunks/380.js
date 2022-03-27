@@ -1,5 +1,5 @@
-exports.id = 633;
-exports.ids = [633];
+exports.id = 380;
+exports.ids = [380];
 exports.modules = {
 
 /***/ 338:
@@ -25,7 +25,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 335:
+/***/ 380:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -44,7 +44,7 @@ var head_default = /*#__PURE__*/__webpack_require__.n(head_);
 var next_link = __webpack_require__(664);
 // EXTERNAL MODULE: external "next/router"
 var router_ = __webpack_require__(853);
-;// CONCATENATED MODULE: ./components/ActiveLink.jsx
+;// CONCATENATED MODULE: ./components/ActiveLink.tsx
 
 
 
@@ -58,7 +58,7 @@ const ActiveLink = ({ text , href  })=>{
     return(/*#__PURE__*/ jsx_runtime_.jsx(next_link["default"], {
         href: href,
         children: /*#__PURE__*/ jsx_runtime_.jsx("a", {
-            style: path === href ? style : null,
+            style: path === href ? style : undefined,
             children: text
         })
     }));
@@ -67,7 +67,7 @@ const ActiveLink = ({ text , href  })=>{
 // EXTERNAL MODULE: ./components/Navbar.module.css
 var Navbar_module = __webpack_require__(338);
 var Navbar_module_default = /*#__PURE__*/__webpack_require__.n(Navbar_module);
-;// CONCATENATED MODULE: ./components/Navbar.jsx
+;// CONCATENATED MODULE: ./components/Navbar.tsx
 
 
 
@@ -103,7 +103,7 @@ const Navbar = ()=>{
 // EXTERNAL MODULE: ./components/layouts/MainLayout.module.css
 var MainLayout_module = __webpack_require__(786);
 var MainLayout_module_default = /*#__PURE__*/__webpack_require__.n(MainLayout_module);
-;// CONCATENATED MODULE: ./components/layouts/MainLayout.jsx
+;// CONCATENATED MODULE: ./components/layouts/MainLayout.tsx
 
 
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { MainLayout } from "../../components/layouts/MainLayout";
 import { RedLayout } from "../../components/layouts/RedLayout";
 
-export default function Pricing() {
+export default function Pricing(): React.ReactNode {
   return (
     <>
       <h1 className={'title'}>
@@ -17,7 +17,7 @@ export default function Pricing() {
   );
 }
 
-Pricing.getLayout = function getLayout(page) {
+Pricing.getLayout = function getLayout(page: JSX.Element) {
   return (
     <MainLayout page="Pricing">
       <RedLayout>

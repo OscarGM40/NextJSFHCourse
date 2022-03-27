@@ -398,5 +398,138 @@ Puntualmente veremos:
 
 			VIDEO 27 MIGRANDO DE JAVASCRIPT A TYPESCRIPT
 
+NOTA: tipado dinámico es que una variable puede cambiar de string a number(recuerda dinámico,que puede cambiar).Javascript es dinámico,Java es estático.
+Por otro lado,tipado débil es que sin decirle el tipo lo infiere(let palabra = 'casa' < si hago un typeof ya ha inferido que es string)
+Typescript es de tipado estático y no me va a permitir que esa variable palabra sea un number,permanecerá como string en runtime
+Typescript es un supraconjunto de Javascript 
+Recuerda que Typescript ve los errores en buildtime,en tiempo de compilación,y los muestra en el IDE(muestra los errores que irian a suceder al compilar)
+Esto es bueno,ya que no llegarán los errores al tiempo de ejecución del script,pues no compilará
+
+Bien,volviendo al video,para migrar a TS hay que crear un tsconfig.json en la raiz del proyecto(fijate en la libreria npm touch-cli que se puede instalar en windows para usar el comando touch).
+Me faltará instalar typescript y los types para react y node(en desarrollo todo):
+yarn add -D typescript @types/react @types/node
+
+En cuanto levante la app llenará ese tsconfig.json con la configuracíon recomendada.También debería crear el next-env.d.ts.Desde luego,no puede ser más sencillo.
+Doc:https://nextjs.org/learn/excel/typescript/create-tsconfig 	 
+
+NOTAS: fijate que puedo tipar un objeto como CSSProperties.De esta forma sólo podré escribir reglas CSS en él.Algo que necesitaré en Typescript a menudo:
+i
+mport { CSSProperties, FC } from 'react';
+
+const style: CSSProperties = {
+  color: '#0070f3',
+  textDecoration: 'underline'
+}
+
+type Props = {
+  text: string;
+  href: string;
+}
+
+export const ActiveLink: FC<Props> = ({ text, href }) => {
+
+  const router = useRouter();
+  const path = router.pathname;  
+
+  return (
+    <Link href={href}>
+      <a style={ path === href ? style : undefined}>{text}</a>
+    </Link>
+  )
+}
+Recuerda que hay diferencias entre React.Element | JSX.Element y React.ReactNode.Y React.Fc<T> es la mejor solución.
+
+Un ReactNode es un ReactElement | ReactFragment | string | number | null | undefined | boolean | ReactNode[]  <- o sea que puede ser cualquier cosa:
+
+type ReactNode = ReactChild | ReactFragment | ReactPortal | boolean | null | undefined;
+
+Ese ReacElement es muy parecido a JSX.Element(un JSX.Element es un ReactElement cuyas props and type son de tipo any).
+ReactNode es lo que devuelve el método render() en una class extends React.Element.
+En resumen puedo asignar casi cualquier cosa a ReactNode,con lo que es preferible usar tipos más fuertes
+
+			VIDEO 29 MIGRANDO EL _app.jsx a _app.tsx
+
+Antes de nada,fijate que en el endpoint debo tipar los argumentos,y que si sé como luce la response debería tiparla también:
+
+type Data = {
+  name: string
+}
+
+export default function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
+  res.status(200).json({ name: 'John Doe' })
+}
+En cuanto al uso de type o interface ,sabiendo que la response no va a cambiar ni voy a heredar o usar este contrato en otro lado puedo usar type perfectamente.
+
+Ahora si,vayamos al _app.tsx ya que es muy interesante,pues usaré dos intersecciones para expandir la funcionalid de las interfaces por default para que tengan el método getLayout que recordemos que mantenia el state entre páginas de esta forma:
+
+type NextPageWithLayout = NextPage & {
+  getLayout?: (page: ReactElement, name?: string) => ReactNode;
+};
+
+type AppPropsWithLayout = AppProps & {
+  Component: NextPageWithLayout;
+};
+
+function MyApp({ Component, pageProps }: AppPropsWithLayout) {
+
+  const getLayout = Component.getLayout || ((page) => page);
+  return getLayout(<Component {...pageProps} />, "about");
+
+}
+IMPORTANTE: fijate que este archivo devuelve JSX asi que debe acabar en tsx.
+
+Sólo faltaría ir por cada page que llame a algun layout e indicarlo:
+Pricing.getLayout = function getLayout(page: JSX.Element) {
+
+			VIDEO 30-31 DESPLEGANDO NUESTRA APP
+
+Las formas más comunes de despliegue son usando Docker,usando un servicio como Vercel,Firebase,etc o usando la intranet con el comando yarn build + yarn start(que llamará a next start)  y dejar el script corriendo y dando visión al equipo,etc.
+Obviamente la tercera es la forma menos recomendada.
+NOTA: usar yarn start levanta un servidor muy parecido al de express ya configurado con los paths,etc.Muy útil,aunque sea la opción menos recomendada.
+
+Desplegarlo con vercel es muy sencillo,ya que crearon Next.Enlazamos el repositorio remoto y lo desplegamos
+
+			VIDEO 32-33 GENERANDO IMAGEN DOCKER Y DESPLEGANDOLA
+
+Fernando provee un gist con dos formas de crear el Dockerfile,la más simple genera una imagen demasiado pesada,asi que es mejor usar la ligera.
+NOTA:fijate que tengo que activar experimental en el next.config.js para que no dé fallo el Dockerfile que me da Next:
+
+* en el next.config.js
+
+const nextConfig = {
+  reactStrictMode: true,
+  experimental:{
+    outputStandalone: true
+  }
+}
+Esta configuración hace que la imagen sea más pequeña.También recomiendan cambiar el script start:
+  "start": "next start -p ${PORT:=3000}", < fijate que es Go.
+
+Puedo ver que con esa opción me va bien el node server.js y que el despliegue es correcto
+
+			SECCION 04 STATIC GENERATED APP - POKEMON APP
+
+Llegamos a un punto muy interesante,que es la generación estática.Imaginando que sólo hay 151 pokemones y que nunca cambian,ya sabemos que el pokemon 1 es bulbasaur,que el 2 es pikachu,que hay 151,etc asi que va a lucir igual siempre nuestra app,y podemos decirle a next que cachee todo.
+Es como si creará esos pokemon1.html,pokemon2.html y almacene esos 151 archivos html que nunca cambiarán.Esto lo consigo mediante getStaticPath y getStaticProps(supongo que el primero hace la rutas).
+NOTA: al usar estos métodos Next sabrá al hacer el build que debe comportarse de esta forma.
+
+Esta sección es sumamente importante para comprender cómo podemos crear de forma estática páginas aunque tengan argumentos dinámicos.
+
+Puntualmente veremos:
+1- Multiples componentes de NextUI
+2- Flex Layout
+3- Temas de NextUI
+4- Next _document
+5- Navegación
+6- Parámetros por URL
+7- Parámetros estáticos
+8- Next - GetStaticProps
+9- Next - getStaticPaths
+10- Generar 151 páginas de forma estática en tiempo de construcción (build time)
+
+Fijate que usaré NextUI como libreria de estilos y que realmente no voy a crear 151 páginas en desarrollo,pero si en el buildtime.
+
+			VIDEO 38 INICIO DE SECCIÓN - POKEMON STATIC
+
 
 

@@ -17,9 +17,9 @@ export default function About() {
   );
 }
 
-About.getLayout = function getLayout(page, name) {
+About.getLayout = function getLayout(page: JSX.Element, name?: string) {
   return (
-    <MainLayout page={name}>
+    <MainLayout page={name!}>
       <DarkLayout>
         {page}
       </DarkLayout>

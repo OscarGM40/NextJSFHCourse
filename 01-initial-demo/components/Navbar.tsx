@@ -1,7 +1,12 @@
 import { ActiveLink } from "./ActiveLink"
 import styles from './Navbar.module.css'
 
-const menuItems = [
+
+type Route = {
+  href: string;
+  text: string;
+}
+const menuItems: Array<Route> = [
   {
     text: 'Home',
     href: '/'
@@ -20,10 +25,10 @@ const menuItems = [
   },
 ];
 
-export const Navbar = () => {
+export const Navbar: React.FC = () => {
   return (
     <nav className={styles['menu-container']}>
-      {/* porque no destructurar el arg?? Es buena idea realmente */}
+      {/* recuerda destructurar el arg Es buena idea realmente */}
       {menuItems.map(({ text, href }) => (
         <ActiveLink key={href} text={text} href={href} />
       ))}
