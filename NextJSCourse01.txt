@@ -531,5 +531,201 @@ Fijate que usaré NextUI como libreria de estilos y que realmente no voy a crear
 
 			VIDEO 38 INICIO DE SECCIÓN - POKEMON STATIC
 
+Vamos a crear un proyecto de absoluto cero.Una de las mejores formas que tengo de crearlo es con :
+yarn create next-app --typescript <- ¿no pide @latest?
+
+						VIDEO 40 NEXTUI LIBRARY
+
+NextUI casualmente no tiene ninguna relación con Next,es una libreria de componentes de React únicamente(posiblemente en un futuro lo añadan para Angular o Vue)
+>npm install @nextui-org/react
+
+NOTA: puedo observar que la libreria está en Beta.No se recomienda para un proyecto serio en producción.
+Puedo observar que son bastante bonitos los componentes que ofrece.
+	
+Para que NextUI funcione correctamente tengo que usar el HOC <NextUIProvider> en el punto más alto:
+
+import { NextUIProvider } from '@nextui-org/react';
+
+function MyApp({ Component, pageProps }: AppProps) {
+  return (
+    <NextUIProvider>
+      <Component {...pageProps} />
+    </NextUIProvider>
+  );
+
+IMPORTANTE: NextUI recomienda hacer un flush completo de los estilos de la aplicación.Para ello hay que crear el file _document.js
+
+				VIDEO 42 FILE _document.js
+
+Para que los estilos de la libreria se vean igual en cualquier navegador hay que llamar a CssBaseLine en ese archivo _document.js.
+NOTA: puedo usar un custom Document para aumentar funcionalidad en las etiquetas <html> y <body>.Para ello debo sobreescibir en ./pages/_document.js el Document por defecto de esta forma(u otra que necesite).
+TIP: usualmente un file que empiece por _ es algo especial de Next
+
+			VIDEO 43 IMPLEMENTANDO EL THEME DARK
+
+Si bien podria pasar al HOC <NextUIProvider theme=""> el tema no lo vamos a hacer en duro,pues queremos cambiarlo en tiempo de ejecución.
+
+Lo que haremos es crear el file themes/darktheme.ts:
+
+import { createTheme } from '@nextui-org/react';
+
+export const darkTheme = createTheme({
+  type: 'dark',
+  theme: {
+    colors: { }
+  }
+}) 
+
+					VIDEO 44 LAYOUT PRINCIPAL
+
+Usualmente no se sabe cuantos layouts tendrá la app,asi que siempre debo considerar que tendrá varios y trabajar en base a esa idea.Es buena idea crear la carpeta layouts con los layouts y usar un barrel file para exportaciones masivas:
+export const Layout: React.FC<LayoutProps> = ({
+  children,
+  title,
+}: LayoutProps) => {
+  return (
+    <>
+      <Head>
+        <title>{title ?? "Pokemon App"}</title>
+        <meta name="author" content="Oscar Gonzalez" />
+        <meta
+          name="description"
+          content={`Información sobre el pokémon ${title}`}
+        />
+        <meta name="keywords" content={`${title}, pokemon, pokedex`} />
+      </Head>
+
+      <Navbar />
+
+      <main
+        style={{
+          padding: "5px 20px",
+        }}
+      >
+        {children}
+      </main>
+    </>
+
+NOTA: parece que al final es igual usar una clase que un estilo inline en Next.Investigar más sobre esto.Asi que para pequeños estilos como ese padding puedo usar el atributo style.
+
+					VIDEO 44 CREANDO LA NAVBAR
+
+Dado que estamos usando la libreria en beta NextUI puedo poner la navbar del color que quiera accediendo al theme con el hook useTheme(). Fijate que puedo acceder a isDark o alguna otra propiedad:
+
+export const Navbar = () => {
+
+  const {theme} = useTheme();
+  
+  return (
+    <div
+      style={{
+        display: "flex",
+        width: "100%",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "start",
+        padding: "0px 20px",
+        backgroundColor: theme?.colors.gray900.value,
+      }}
+    >
+      <span>hola</span>
+    </div>
+  );
+};
+
+La Navbar va a ser algo muy sencillo:
+      <Image
+        src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/132.png"
+        alt="icono de la app"
+        width={70}
+        height={70}
+      />
+      <Text color="white" h2>
+        P
+      </Text>
+      <Text color="white" h3>
+        okémon
+      </Text>
+
+      {/* si son componentes de NextUI se recomienda usar el atributo css en vez de style para dar estilos en linea */}
+      <Spacer css={{ flex: 1 }} />
+      <Text color="white" h3>
+        Favoritos
+      </Text>
+
+NOTA: fijate que Next por defecto va a usar Static Generation,y le estoy dando una URL para que busque la imagen.Dado que podria ser una url a un script malicioso,etc, le tengo que indicar que es un dominio válido donde puede ir a buscar imágenes.
+
+					VIDEO 45 NEXT - GET STATIC PROPS	
+
+Esta clase es de las más importantes.Mentalicemonos de que sólo vamos a mostrar los 151 primeros pokémones.Da igual qué usuario,o cuando siempre voy a mostrar los 151 primeros pokemones.
+Entonces,yo ya sé quienes son y qué es lo que voy a mostrar.Siempre serán los mismos 151 pokemones.Luego,antes de que la persona haga el request ya sé qué debo mostrar.
+
+Si voy a la documentación de Next veré que puedo hacer SSR( Server-side rendering) o SSG( Static-site generation) u otras como CSR(Client-side rendering,lo que hace React) o ISR( Incremental Static Regeneration).
+El mejor rendimiento lo da el SSG(obviamente,pues está cacheado todo).
+
+NOTA: cuando hago SSG todas las páginas html se crean en el servidor y cuando el usuario hace una request el servidor simplemente manda la pag web ya construida,ya la tiene construida(se puede hidratar con javascript,ya lo veremos)
+
+IMPORTANTE: obviamente no siempre voy a poder usar StaticSiteGeneration pues si el usuario necesita datos actualizados o dinámicos,etc tendré que usar ServerSideRendering
+
+SUPERIMPORTANTE: si yo exporto una función con el nombre 'getStaticProps' desde una Page,automáticamente Next construirá esta página en el buildtime(al hacer el build).Se enviará al cliente desde esa cache.
+
+Recuerda que estas funciones getXXX sólo puedo usarlas en páginas y que se ejecutan en el lado del servidor,pudiendo acceder al file-system del user, a bases de datos,acceder a tokens,...
+IMPORTANTE: y no sólo esto,sino que nada de lo que ejecute en esa función llega al cliente,a no ser que lo mande explicitamente en las props del return.
+
+				VIDEO 46 TRAER DE FORMA ESTÁTICA LOS POKEMONS
+
+NOTA: los Barrelfiles son para el pattern Barrelimports.Bien,instalemos axios y creemos una instancia nuestra :
+
+import axios from "axios";
+
+const pokeApi = axios.create({
+  baseURL:'https://pokeapi.co/api/v2',
+  headers:{'Content-Type': 'application/json'}
+})
+
+export default pokeApi;
+
+Puedo ver que la data se me devuelve asi,teniendo que realizar otra petición encadenada:
+{ name: 'onix', url: 'https://pokeapi.co/api/v2/pokemon/95/' },
+{ name: 'drowzee', url: 'https://pokeapi.co/api/v2/pokemon/96/' },
+{ name: 'hypno', url: 'https://pokeapi.co/api/v2/pokemon/97/' },
+{ name: 'krabby', url: 'https://pokeapi.co/api/v2/pokemon/98/' },
+{ name: 'kingler', url: 'https://pokeapi.co/api/v2/pokemon/99/' },
+
+Además,esto está en data.results.Asi que será buena idea sacar el tipo de la response.
+
+				VIDEO 47 COLOCAR EL TIPO DE RESPUESTA EN AXIOS
+
+IMPORTANTE: fijate que la extensión del IDE requiere tener en el portapapeles toda la response a tipar.
+
+// Generated by https://quicktype.io
+/* fijate que la puta extensión requiere tener JSON en el portapapeles */
+export interface PokemonListResponse {
+  count:    number;
+  next?:     string;
+  previous?: string;
+  results:  SmallPokemon[];
+}
+
+export interface SmallPokemon {
+  name: string;
+  url:  string;
+}
+
+/* recuerda que estas funciones sólo se pueden ejecutar en pages y que se ejecutan en el lado del servidor */
+export const getStaticProps: GetStaticProps = async (ctx) => {
+  const { data } = await pokeApi.get<PokemonListResponse>("/pokemon?limit=151");
+  return {
+    props: {
+      pokemons: data.results,
+    },
+  };
+};
+
+export default HomePage;
+
+Desde luego este tipo de pasos son fundamentales.Podria probar a crear el adaptermañana.
+
+			VIDEO 48 TAREA - MOSTRAR NOMBRE Y NUMERO-ID DEL POKEMON
 
 
