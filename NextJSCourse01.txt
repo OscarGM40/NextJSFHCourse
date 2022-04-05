@@ -728,4 +728,154 @@ Desde luego este tipo de pasos son fundamentales.Podria probar a crear el adapte
 
 			VIDEO 48 TAREA - MOSTRAR NOMBRE Y NUMERO-ID DEL POKEMON
 
+Para la tarea necesitaré transformar la data para ver tanto el id como el svg.
+  const pokemons: SmallPokemon[] = data.results.map( (pokemon,index) => {
+     return {
+      id: index + 1,
+      name: pokemon.name,
+      url: pokemon.url,
+      img: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/${index + 1}.svg`,
+    }; 
+  });
+NOTA: si hago el build veré una nueva opción SSG marcada con un punto blanco:
+λ  (Server)  server-side renders at runtime (uses getInitialProps or getServerSideProps)
+●  (SSG)     automatically generated as static HTML + JSON (uses getStaticProps)
+Indicará que esa page está usando SSG
+
+IMPORTANTE: veré un index.json(o el nombre de la page.json) con la data para generar la página en el build.
+
+				VIDEO 49 MOSTRAR TARJETAS DE POKEMONS
+
+Es momento de crear unas tarjetas.LLegados a este punto,puedo observar que esta libreria pinta muy bien y tiene un acabado espectacular y muchas opciones:
+
+return (
+    <Layout title="Listado de pokemons">
+      <Grid.Container gap={2} justify="flex-start">
+        {pokemons.map((pokemon) => (
+          <Grid xs={6} sm={3} md={2} key={pokemon.id} xl={1}>
+            <Card cover hoverable clickable animated>
+              <Card.Body css={{ p: 1 }}>
+                <Card.Image 
+                  src={pokemon.img}
+                  alt={pokemon.name}
+                  width="100%"
+                  height={230}
+                />
+              </Card.Body>
+              <Card.Footer
+                blur
+                css={{
+                  position: "absolute",
+                  bgBlur: "#0f1114",
+                  borderTop: "$borderWeights$light solid $gray700",
+                  bottom: 0,
+                  zIndex: 1,
+                }}
+              >
+                <Row justify="space-between">
+                  <Text transform="capitalize" >{pokemon.name}</Text>
+                  <Text>#{pokemon.id}</Text>
+                </Row>
+              </Card.Footer>
+            </Card>
+          </Grid>
+        ))}
+      </Grid.Container>
+    </Layout>
+  );
+
+					VIDEO 50 COMPONENTE PARA LAS TARJETAS
+
+Dado que es mejor crear un componente para cada tarjeta hagamoslo.Fijate que la mejor idea es usar React.FC<T>.Fijate que va genial.Acostumbrate,ya que laboralmente también es la mejor opción.
+
+			VIDEO 51 RECIBIR ARGUMENTOS POR URL Y NAVEGACIÓN
+
+Hay varias tecnicas para navegar,ya hemos visto el <Link> de Next,que hace un barrido por los que haya en pantalla y los cachea,pero no permitia estilizarlos,por ello se embebe una <anchor> y se estiliza a ella.
+
+Pero esta vez vamos a hacerlo de otra manera.Fijate además que sabemos que sólo va a haber 151 pokemones,y más importante aún,ya sé de antemano qué información voy a mostrar(sé que el 1 es bulbasaur,no va a cambiar,que el 2 es pikachu,etc...)
+NOTA: y si cambiará está la feature que nos ofrece Next ISR(Incremental Static Regeneration),que ya veremos.
+
+Bien,en cuanto a como crear una ruta dinámica en Next nada nuevo,creo un file en pokemon/[id].tsx con la export por default( recuerda que las pages van por default) y ahora puedo rescatar ese id tanto en el lado del servidor como del frontend:
+
+Primero navego desde la Card
+ <Card cover hoverable clickable animated
+      onClick={() => router.push(`/pokemon/${pokemon.id}`)}>
+NOTA: router.push({}) o router.push("") lleva varias firmas.Puede ser un objeto,aunque normalmente es un string.
+
+Bien,si voy a la page dinámica pokemon/[id] veré ese id en router.query(fijate que el router en Next vale para todo)
+
+IMPORTANTE: Udemy realiza ISR(cada 24h recachea todo).Mediante ISR puedo indicar a Next un tiempo y Next recacheará lo indicado de nuevo
+
+Pero antes de comprender el ISR tengo que dominar el SSG,pero esta vez,con argumentos.
+
+				VIDEO 52 NEXT GET STATIC PATHS
+
+Cuando yo exporte la función getStaticPaths(SSG) desde una página que use ruteo dinámico(como es el caso de pages/pokemon/[id]) Next.js pre-renderizará estáticamente todos los paths indicados en getStaticPaths(fijate que es la homóloga de getStaticProps)
+
+NOTA: recuerda que tanto getStaticProps como getStaticPaths guardarán HTML + JSON
+Y recuerda que las páginas no cambian(aunque se pidan dinámicamente,el 1 siempre será el mismo pokemon,el 2 igual,etc)
+
+IMPORTANTE: no sólo tengo que usar getStaticPaths por ser una página dinámica,sino que no podría usar getStaticProps por ello(veré el error por la UI).Debo usar getStaticPaths en cuanto sea una página dinámica([id].tsx).
+
+IMPORTANTE: al usar SSG en una page dinámica y por ello su método getStaticPaths tengo que pasar los params como un string(ya que son un string) y además un tipo de fallback:
+
+export const getStaticPaths: GetStaticPaths = async (ctx) => {
+  return {
+    paths: [ { params: { id: "1" }, }, ],
+    fallback: "blocking", <- normalmente usaré false
+  };
+};
+
+NOTA: getStaticPaths requiere de getStaticProps también,no tiene sentido por sí solo.Recuerda también que ambas funciones se ejecutan en el servidor.
+
+		VIDEO 153 GENERANDO LAS 151 PÁGINAS ESTÁTICAS PARA CADA POKEMON
+
+Obviamente primero tendré que generar un arreglo de strings con valores del "1" al "151".Cualquier forma valdŕa:
+const pokemons151 = [...Array(151).keys()].map(x => String(x+1));
+
+Ya sólo falta crear el bucle para el arreglo de paths:
+ paths: pokemons151.map(id => ({ params: { id } })), <- fijate en que id:id se computará a id: "1", id: "2"
+
+IMPORTANTE: una vez dicho a Next cuales son todos los paths que quiero cachear,tengo que usar getStaticProps,y realizar la petición:
+
+/* getStaticProps recibirá los paths de getStaticPaths en ctx. */
+export const getStaticProps: GetStaticProps = async (ctx) => {
+  /* al loro con esto,asinto, castea desde la propiedad padre */
+  const { id } = ctx.params as { id: string };
+
+  const { data } = await pokeApi.get<PokemonResponse>(`/pokemon/${id}`);
+  return {
+    props: {
+      pokemon: data,
+    },
+  };
+};
+
+Fijate que el id lo necesitamos para pedir el pokemon(realmente no creo que tenga nada que ver getStaticPaths,el ctx.params también accede al param.
+
+IMPORTANTE: es muy importante entender que en modo dev no puedo apreciar bien lo que está sucediendo,pues cada refresh hace que Next ejecute todo otra vez,pero el objetivo es que se haga el build una vez y se cacheen los 151 posibles destinos una vez(puedo ver esto con un yarn build)
+Inclusive al dejar el console.log puedo ver que ha pedido las 151 páginas al hacer el build(fijate lo poderoso que es Next):
+
+┌ ● / (326 ms)                             5.39 kB        98.1 kB
+├   /_app                                  0 B              86 kB
+├ λ /404                                   192 B          86.2 kB
+├ λ /api                                   0 B              86 kB
+├ λ /api/pokeApi                           0 B              86 kB
+└ ● /pokemon/[id] (35660 ms)               880 B          93.6 kB
+    ├ /pokemon/2 (382 ms)
+    ├ /pokemon/149 (343 ms)
+    ├ /pokemon/150 (332 ms)
+    ├ /pokemon/148 (331 ms)
+    ├ /pokemon/61 (315 ms)
+    ├ /pokemon/65 (313 ms)
+    ├ /pokemon/145 (313 ms)
+    └ [+144 more paths]
+
+Obviamente tardó 35 segundos ya que ha cacheado 151 paginas el illoputa.Esto lo hará sólo una vez,ojo.Puedo hacer el yarn start y comprobar todo eso.
+NOTA: no hay tiempos de carga,jaja.Increible
+
+					VIDEO 54 DISEÑO DE LA PÁGINA DE POKEMON
+
+
+
 
