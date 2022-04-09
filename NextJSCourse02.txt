@@ -1,0 +1,99 @@
+				SECCION 05 POKEMON STATIC - CONTINUACIÓN APP POKEMONS
+
+En esta sección nos vamos a preocupar en hidratar la aplicación.React es capaz de modificar ese contenido estático perfectamente.Fijate que esta feature es increiblemente poderosa.
+Recuerda,el hecho de que el contenido sea generado de manera estática no significa que no puedo modificarlo despues(incluso usaré useReducer).
+
+En esta sección trabajaremos con la hidratación de nuestro contenido estático con código de React. También aprenderemos a utilizar librerías de terceros aunque estas no fueran escritas en TypeScript.
+
+Adicionalmente hay varias tareas que nos ayudarán a reforzar todo lo aprendido hasta el momento.
+
+					VIDEO 62 GUARDAR EN LOCALSTORAGE
+
+Si intento acceder al localStorage de esta forma voy a ver este error:
+
+const PokemonPage: NextPage<Props> = ({ pokemon }) => {
+
+  const onToggleFavorite = () => {
+    localStorage.setItem('favorites',`${pokemon.id}`);
+  }
+  localStorage.getItem('favorites') <- aqui voy a ver que es el backend el que intenta acceder al localStorage y obviamente sólo existe en el frontend.
+
+Server Error
+ReferenceError: localStorage is not defined 
+
+Si bien hay librerias para poder acceder al localStorage desde el backend 
+Este error sucede porque en esa instrucción estoy en node y no sobre el objeto window:
+console.log(typeof window); <- si hago esto veré que da undefined en la consola del servidor pero que devuelve un objeto en la consola del browser.
+Con todo esto en mente vamos a resolver la tarea pues
+
+			VIDEO 63 GUARDAR EN EL LOCALSTORAGE EL ARREGLO DE FAVORITOS
+
+Dado que hay que usar un arreglo y es una función auxiliar lo mejores crearla como una utilidad:
+
+const toggleFavorite = (id: number) => {
+
+  const favorites: number[] = JSON.parse(localStorage.getItem('favorites') || '[]');
+  
+  const isFavorited = favorites.includes(id);
+
+  if (isFavorited) {
+    const newFavorites = favorites.filter(pokeId => pokeId !== id);
+    localStorage.setItem('favorites', JSON.stringify(newFavorites));
+  } else {
+    localStorage.setItem('favorites', JSON.stringify([...favorites, id]));
+  }
+}
+
+export default {
+  toggleFavorite
+}
+
+				VIDEO 64 LEER Y VERIFICAR SI EXISTE EN FAVORITOS
+
+Ahora queremos cambiar el texto del boton de Favoritos(guardar/sacar de favoritos)
+Fijate que se nos presenta el mismo problema al estar en Next,ya que el componente tiene ámbito tanto en el servidor como en el browser(es porqué es una página?? o esto es para todo componente de React en Next??).
+Una simple validación filtrará esto:
+
+const existsInFavorites = (id: number): boolean => {
+  if(typeof window === 'undefined') return false;
+  const favorites: number[] = JSON.parse(localStorage.getItem('favorites') || '[]');
+  return favorites.includes(id);
+}
+Fijate que tendré que usar mucho typeof window al usar frameworks híbridos.
+
+						VIDEO 65 PANTALLA DE FAVORITOS
+
+Primeramente vamos a cargar en un efecto el array de ids:
+
+const Favorites: NextPage<Props> = () => {
+  const [favoritePokemons, setFavoritePokemons] = useState<number[]>([]);
+
+  useEffect(() =>{
+    setFavoritePokemons(localFavorites.pokemons);
+  },[])
+
+TIP: fijate que puedo ir a las devTools y buscar por el nombre del componente,ya que es una locura buscar en el árbol.Fijate que puedo ver su useState con su carga(en este caso veré el arreglo de ids) y el useEffect,...Muy interesante.
+
+			VIDEO 66 CONSTRUIR EL LISTADO DE POKEMONS FAVORITOS
+
+Simplemente seguir las instrucciones.Fijate que cuando se haga el build no veré el efecto de esta navegación:
+ const router = useRouter();
+
+  const onFavoriteClicked = () => {
+    router.push(`/pokemon/${pokemonId}`);
+  };
+
+  return (
+    <Grid xs={6} sm={3} md={2} xl={1} key={pokemonId}>
+      <Card
+        hoverable
+        clickable
+        css={{ padding: "10px" }}
+        onClick={onFavoriteClicked}
+      >
+Ya que en el npm run dev estoy en el backend,pero esto será servido con SSG.Comprobarlo.
+
+				VIDEO 68 LIBRERIAS EXTERNAS CANVAS Y CONFETTI
+
+
+

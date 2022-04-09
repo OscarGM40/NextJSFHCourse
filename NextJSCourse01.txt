@@ -876,6 +876,39 @@ NOTA: no hay tiempos de carga,jaja.Increible
 
 					VIDEO 54 DISEÑO DE LA PÁGINA DE POKEMON
 
+Fijate que a la hora de utilizar SSG tengo que tener cuidado,en este caso la petición devuelve mucha data y el json que se generará ocupará espacio en el disco duro del cliente.
+La recomendación de Next(y Fernando) es ser meticulosos con lo que se almacene.En este ejemplo dejaremos la respuesta así de extensa,pero no es lo que debo hacer en una aplicación real.
+En cuanto al componente fijate de nuevo que esta libreria es bastante bonita,quizás también bastante informal.
 
+				VIDEO 55 NAVEGACIÓN Y PÁGINA DE FAVORITOS
 
+Fijate como he tenido que renombrar el Link de Next dado que se llama igual que el Link de NextUI(hay que usar el LInk de la libreria porque el Link de Next no permite tener múltiples hijos,asi que se le pasa un único hijo que es el Link de NextUI,el cual obviamente si permite tener dos Text como hijos:
 
+import NextLink from "next/link";
+import { Link, Spacer, Text, useTheme } from "@nextui-org/react";
+
+      <NextLink href="/" passHref>
+        <Link>
+          <Text color="white" h2>
+            P
+          </Text>
+          <Text color="white" h3>
+            okémon
+          </Text>
+        </Link>
+      </NextLink>
+
+Hago lo mismo para el otro link,fijate que el Link de la libreria ya trae el cursor pointer.
+
+				VIDEO 56 RESUMEN DE LA SECCIÓN
+
+Fijate que basicamente tenemos una aplicación de React,a excepción de la parte de las staticProps.
+Las staticProps generan al hacer el build archivos .html + .json los cuales cacheará y llamará en runtime(no hará peticiones a la API).
+NOTA: fijate que realizó 151 peticiones a la API al realizar el build,realmente no me importa,pues la data no va a cambiar.
+Recuerda también que las funciones getStaticProps,getStaticPaths,etc se ejecutan SOLO en el servidor.
+
+IMPORTANTE: a pesar de tener 151 páginas generadas estáticamente yo aún puedo operar sobre ellas(pulsar en botones,guardarlas en favoritos,...)Fijate en este detalle,aún puedo tener funcionalidad sobre ellas,aunque estan cacheadas.
+A esto se le llama 'hidratar la página con código de React' <- en realidad también puede ser con Javascript(simplemente 'hidratar la página').
+Hidrataremos la página posteriormente(por ejemplo,podría traer la sección de comentarios bajo demanda,cada vez que se visite la página,pero tener las cards estáticas).Fijate que Udemy hace esto con los precios y las desc de los cursos.
+
+NOTA: fijate que todo esto me debe llevar a pensar desde un principio qué es lo que quiero cachear y qué no.
