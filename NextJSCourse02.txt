@@ -93,7 +93,33 @@ Simplemente seguir las instrucciones.Fijate que cuando se haga el build no veré
       >
 Ya que en el npm run dev estoy en el backend,pero esto será servido con SSG.Comprobarlo.
 
-				VIDEO 68 LIBRERIAS EXTERNAS CANVAS Y CONFETTI
+				VIDEO 68 LIBRERIA EXTERNA CANVAS-CONFETTI
+
+NOTA: puedo hacer un hard refresh con CTRL+SHIFT+r.
+Esta libreria CanvasConfetti puede ser un tanto llamativa pero la vamos a usar:
+>npm i canvas-confetti 
+> npm i @types/canvas-confetti -D
+Para usarla simplemente hay que configurar el método confetti:
+
+  if(!isInFavorites){
+    confetti({
+    zIndex:999,
+    particleCount:100,
+    spread: 160,
+    angle: -100,
+    origin:{
+      x:0.9,
+      y:0.1
+    }
+    })
+  }
+
+				TAREA 69 POKEMON BY NOMBRE
+
+Seguir las instrucciones.Recuerda que debo especificar todos los paths posibles.
+IMPORTANTE: realmente la API nos devuelve demasiada data.Sería mejor solo coger la necesaria antes de cachearla.
+
+				VIDEO 72 CENTRALIZAR LA DATA 
 
 
 
