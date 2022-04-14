@@ -121,5 +121,8 @@ IMPORTANTE: realmente la API nos devuelve demasiada data.Sería mejor solo coger
 
 				VIDEO 72 CENTRALIZAR LA DATA 
 
+Dado que las dos peticiones son similares puedo resumir un poco todo:
+
+
 
 
