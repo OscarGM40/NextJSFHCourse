@@ -14,7 +14,7 @@ export const PokemonCard: React.FC<Props> = ({ pokemon }) => {
         hoverable
         clickable
         animated
-        onClick={() => router.push(`/pokemon/${pokemon.id}`)}
+        onClick={() => router.push(`/name/${pokemon.name}`)}
       >
         <Card.Body css={{ p: 1 }}>
           <Card.Image

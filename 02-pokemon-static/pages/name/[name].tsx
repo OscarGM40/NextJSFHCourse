@@ -4,7 +4,7 @@ import { GetStaticPaths, GetStaticProps, NextPage } from "next";
 import { PokemonListResponse, PokemonResponse } from "../../interfaces";
 import { pokeApi } from "../api";
 import { useState } from "react";
-import { localFavorites } from "../../utils";
+import { getPokemonInfo, localFavorites } from "../../utils";
 import { Layout } from "../../components/layouts";
 
 interface Props {
@@ -117,20 +117,11 @@ export const getStaticPaths: GetStaticPaths = async (ctx) => {
 
 /* getStaticProps recibirá los paths de getStaticPaths en ctx. */
 export const getStaticProps: GetStaticProps = async (ctx) => {
-  /* al loro con esto,asinto, castea desde la propiedad padre */
   const { name } = ctx.params as { name: string };
 
-  const { data } = await pokeApi.get<PokemonResponse>(`/pokemon/${name}`);
-
-  const pokemon = {
-    id:data.id,
-    name: data.name,
-    sprites: data.sprites,
-  }
-  
   return {
     props: {
-      pokemon,
+      pokemon: await getPokemonInfo(name),
     },
   };
 };
