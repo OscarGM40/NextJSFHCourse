@@ -398,5 +398,517 @@ Puntualmente veremos:
 
 			VIDEO 27 MIGRANDO DE JAVASCRIPT A TYPESCRIPT
 
+NOTA: tipado dinámico es que una variable puede cambiar de string a number(recuerda dinámico,que puede cambiar).Javascript es dinámico,Java es estático.
+Por otro lado,tipado débil es que sin decirle el tipo lo infiere(let palabra = 'casa' < si hago un typeof ya ha inferido que es string)
+Typescript es de tipado estático y no me va a permitir que esa variable palabra sea un number,permanecerá como string en runtime
+Typescript es un supraconjunto de Javascript 
+Recuerda que Typescript ve los errores en buildtime,en tiempo de compilación,y los muestra en el IDE(muestra los errores que irian a suceder al compilar)
+Esto es bueno,ya que no llegarán los errores al tiempo de ejecución del script,pues no compilará
 
+Bien,volviendo al video,para migrar a TS hay que crear un tsconfig.json en la raiz del proyecto(fijate en la libreria npm touch-cli que se puede instalar en windows para usar el comando touch).
+Me faltará instalar typescript y los types para react y node(en desarrollo todo):
+yarn add -D typescript @types/react @types/node
 
+En cuanto levante la app llenará ese tsconfig.json con la configuracíon recomendada.También debería crear el next-env.d.ts.Desde luego,no puede ser más sencillo.
+Doc:https://nextjs.org/learn/excel/typescript/create-tsconfig 	 
+
+NOTAS: fijate que puedo tipar un objeto como CSSProperties.De esta forma sólo podré escribir reglas CSS en él.Algo que necesitaré en Typescript a menudo:
+i
+mport { CSSProperties, FC } from 'react';
+
+const style: CSSProperties = {
+  color: '#0070f3',
+  textDecoration: 'underline'
+}
+
+type Props = {
+  text: string;
+  href: string;
+}
+
+export const ActiveLink: FC<Props> = ({ text, href }) => {
+
+  const router = useRouter();
+  const path = router.pathname;  
+
+  return (
+    <Link href={href}>
+      <a style={ path === href ? style : undefined}>{text}</a>
+    </Link>
+  )
+}
+Recuerda que hay diferencias entre React.Element | JSX.Element y React.ReactNode.Y React.Fc<T> es la mejor solución.
+
+Un ReactNode es un ReactElement | ReactFragment | string | number | null | undefined | boolean | ReactNode[]  <- o sea que puede ser cualquier cosa:
+
+type ReactNode = ReactChild | ReactFragment | ReactPortal | boolean | null | undefined;
+
+Ese ReacElement es muy parecido a JSX.Element(un JSX.Element es un ReactElement cuyas props and type son de tipo any).
+ReactNode es lo que devuelve el método render() en una class extends React.Element.
+En resumen puedo asignar casi cualquier cosa a ReactNode,con lo que es preferible usar tipos más fuertes
+
+			VIDEO 29 MIGRANDO EL _app.jsx a _app.tsx
+
+Antes de nada,fijate que en el endpoint debo tipar los argumentos,y que si sé como luce la response debería tiparla también:
+
+type Data = {
+  name: string
+}
+
+export default function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
+  res.status(200).json({ name: 'John Doe' })
+}
+En cuanto al uso de type o interface ,sabiendo que la response no va a cambiar ni voy a heredar o usar este contrato en otro lado puedo usar type perfectamente.
+
+Ahora si,vayamos al _app.tsx ya que es muy interesante,pues usaré dos intersecciones para expandir la funcionalid de las interfaces por default para que tengan el método getLayout que recordemos que mantenia el state entre páginas de esta forma:
+
+type NextPageWithLayout = NextPage & {
+  getLayout?: (page: ReactElement, name?: string) => ReactNode;
+};
+
+type AppPropsWithLayout = AppProps & {
+  Component: NextPageWithLayout;
+};
+
+function MyApp({ Component, pageProps }: AppPropsWithLayout) {
+
+  const getLayout = Component.getLayout || ((page) => page);
+  return getLayout(<Component {...pageProps} />, "about");
+
+}
+IMPORTANTE: fijate que este archivo devuelve JSX asi que debe acabar en tsx.
+
+Sólo faltaría ir por cada page que llame a algun layout e indicarlo:
+Pricing.getLayout = function getLayout(page: JSX.Element) {
+
+			VIDEO 30-31 DESPLEGANDO NUESTRA APP
+
+Las formas más comunes de despliegue son usando Docker,usando un servicio como Vercel,Firebase,etc o usando la intranet con el comando yarn build + yarn start(que llamará a next start)  y dejar el script corriendo y dando visión al equipo,etc.
+Obviamente la tercera es la forma menos recomendada.
+NOTA: usar yarn start levanta un servidor muy parecido al de express ya configurado con los paths,etc.Muy útil,aunque sea la opción menos recomendada.
+
+Desplegarlo con vercel es muy sencillo,ya que crearon Next.Enlazamos el repositorio remoto y lo desplegamos
+
+			VIDEO 32-33 GENERANDO IMAGEN DOCKER Y DESPLEGANDOLA
+
+Fernando provee un gist con dos formas de crear el Dockerfile,la más simple genera una imagen demasiado pesada,asi que es mejor usar la ligera.
+NOTA:fijate que tengo que activar experimental en el next.config.js para que no dé fallo el Dockerfile que me da Next:
+
+* en el next.config.js
+
+const nextConfig = {
+  reactStrictMode: true,
+  experimental:{
+    outputStandalone: true
+  }
+}
+Esta configuración hace que la imagen sea más pequeña.También recomiendan cambiar el script start:
+  "start": "next start -p ${PORT:=3000}", < fijate que es Go.
+
+Puedo ver que con esa opción me va bien el node server.js y que el despliegue es correcto
+
+			SECCION 04 STATIC GENERATED APP - POKEMON APP
+
+Llegamos a un punto muy interesante,que es la generación estática.Imaginando que sólo hay 151 pokemones y que nunca cambian,ya sabemos que el pokemon 1 es bulbasaur,que el 2 es pikachu,que hay 151,etc asi que va a lucir igual siempre nuestra app,y podemos decirle a next que cachee todo.
+Es como si creará esos pokemon1.html,pokemon2.html y almacene esos 151 archivos html que nunca cambiarán.Esto lo consigo mediante getStaticPath y getStaticProps(supongo que el primero hace la rutas).
+NOTA: al usar estos métodos Next sabrá al hacer el build que debe comportarse de esta forma.
+
+Esta sección es sumamente importante para comprender cómo podemos crear de forma estática páginas aunque tengan argumentos dinámicos.
+
+Puntualmente veremos:
+1- Multiples componentes de NextUI
+2- Flex Layout
+3- Temas de NextUI
+4- Next _document
+5- Navegación
+6- Parámetros por URL
+7- Parámetros estáticos
+8- Next - GetStaticProps
+9- Next - getStaticPaths
+10- Generar 151 páginas de forma estática en tiempo de construcción (build time)
+
+Fijate que usaré NextUI como libreria de estilos y que realmente no voy a crear 151 páginas en desarrollo,pero si en el buildtime.
+
+			VIDEO 38 INICIO DE SECCIÓN - POKEMON STATIC
+
+Vamos a crear un proyecto de absoluto cero.Una de las mejores formas que tengo de crearlo es con :
+yarn create next-app --typescript <- ¿no pide @latest?
+
+						VIDEO 40 NEXTUI LIBRARY
+
+NextUI casualmente no tiene ninguna relación con Next,es una libreria de componentes de React únicamente(posiblemente en un futuro lo añadan para Angular o Vue)
+>npm install @nextui-org/react
+
+NOTA: puedo observar que la libreria está en Beta.No se recomienda para un proyecto serio en producción.
+Puedo observar que son bastante bonitos los componentes que ofrece.
+	
+Para que NextUI funcione correctamente tengo que usar el HOC <NextUIProvider> en el punto más alto:
+
+import { NextUIProvider } from '@nextui-org/react';
+
+function MyApp({ Component, pageProps }: AppProps) {
+  return (
+    <NextUIProvider>
+      <Component {...pageProps} />
+    </NextUIProvider>
+  );
+
+IMPORTANTE: NextUI recomienda hacer un flush completo de los estilos de la aplicación.Para ello hay que crear el file _document.js
+
+				VIDEO 42 FILE _document.js
+
+Para que los estilos de la libreria se vean igual en cualquier navegador hay que llamar a CssBaseLine en ese archivo _document.js.
+NOTA: puedo usar un custom Document para aumentar funcionalidad en las etiquetas <html> y <body>.Para ello debo sobreescibir en ./pages/_document.js el Document por defecto de esta forma(u otra que necesite).
+TIP: usualmente un file que empiece por _ es algo especial de Next
+
+			VIDEO 43 IMPLEMENTANDO EL THEME DARK
+
+Si bien podria pasar al HOC <NextUIProvider theme=""> el tema no lo vamos a hacer en duro,pues queremos cambiarlo en tiempo de ejecución.
+
+Lo que haremos es crear el file themes/darktheme.ts:
+
+import { createTheme } from '@nextui-org/react';
+
+export const darkTheme = createTheme({
+  type: 'dark',
+  theme: {
+    colors: { }
+  }
+}) 
+
+					VIDEO 44 LAYOUT PRINCIPAL
+
+Usualmente no se sabe cuantos layouts tendrá la app,asi que siempre debo considerar que tendrá varios y trabajar en base a esa idea.Es buena idea crear la carpeta layouts con los layouts y usar un barrel file para exportaciones masivas:
+export const Layout: React.FC<LayoutProps> = ({
+  children,
+  title,
+}: LayoutProps) => {
+  return (
+    <>
+      <Head>
+        <title>{title ?? "Pokemon App"}</title>
+        <meta name="author" content="Oscar Gonzalez" />
+        <meta
+          name="description"
+          content={`Información sobre el pokémon ${title}`}
+        />
+        <meta name="keywords" content={`${title}, pokemon, pokedex`} />
+      </Head>
+
+      <Navbar />
+
+      <main
+        style={{
+          padding: "5px 20px",
+        }}
+      >
+        {children}
+      </main>
+    </>
+
+NOTA: parece que al final es igual usar una clase que un estilo inline en Next.Investigar más sobre esto.Asi que para pequeños estilos como ese padding puedo usar el atributo style.
+
+					VIDEO 44 CREANDO LA NAVBAR
+
+Dado que estamos usando la libreria en beta NextUI puedo poner la navbar del color que quiera accediendo al theme con el hook useTheme(). Fijate que puedo acceder a isDark o alguna otra propiedad:
+
+export const Navbar = () => {
+
+  const {theme} = useTheme();
+  
+  return (
+    <div
+      style={{
+        display: "flex",
+        width: "100%",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "start",
+        padding: "0px 20px",
+        backgroundColor: theme?.colors.gray900.value,
+      }}
+    >
+      <span>hola</span>
+    </div>
+  );
+};
+
+La Navbar va a ser algo muy sencillo:
+      <Image
+        src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/132.png"
+        alt="icono de la app"
+        width={70}
+        height={70}
+      />
+      <Text color="white" h2>
+        P
+      </Text>
+      <Text color="white" h3>
+        okémon
+      </Text>
+
+      {/* si son componentes de NextUI se recomienda usar el atributo css en vez de style para dar estilos en linea */}
+      <Spacer css={{ flex: 1 }} />
+      <Text color="white" h3>
+        Favoritos
+      </Text>
+
+NOTA: fijate que Next por defecto va a usar Static Generation,y le estoy dando una URL para que busque la imagen.Dado que podria ser una url a un script malicioso,etc, le tengo que indicar que es un dominio válido donde puede ir a buscar imágenes.
+
+					VIDEO 45 NEXT - GET STATIC PROPS	
+
+Esta clase es de las más importantes.Mentalicemonos de que sólo vamos a mostrar los 151 primeros pokémones.Da igual qué usuario,o cuando siempre voy a mostrar los 151 primeros pokemones.
+Entonces,yo ya sé quienes son y qué es lo que voy a mostrar.Siempre serán los mismos 151 pokemones.Luego,antes de que la persona haga el request ya sé qué debo mostrar.
+
+Si voy a la documentación de Next veré que puedo hacer SSR( Server-side rendering) o SSG( Static-site generation) u otras como CSR(Client-side rendering,lo que hace React) o ISR( Incremental Static Regeneration).
+El mejor rendimiento lo da el SSG(obviamente,pues está cacheado todo).
+
+NOTA: cuando hago SSG todas las páginas html se crean en el servidor y cuando el usuario hace una request el servidor simplemente manda la pag web ya construida,ya la tiene construida(se puede hidratar con javascript,ya lo veremos)
+
+IMPORTANTE: obviamente no siempre voy a poder usar StaticSiteGeneration pues si el usuario necesita datos actualizados o dinámicos,etc tendré que usar ServerSideRendering
+
+SUPERIMPORTANTE: si yo exporto una función con el nombre 'getStaticProps' desde una Page,automáticamente Next construirá esta página en el buildtime(al hacer el build).Se enviará al cliente desde esa cache.
+
+Recuerda que estas funciones getXXX sólo puedo usarlas en páginas y que se ejecutan en el lado del servidor,pudiendo acceder al file-system del user, a bases de datos,acceder a tokens,...
+IMPORTANTE: y no sólo esto,sino que nada de lo que ejecute en esa función llega al cliente,a no ser que lo mande explicitamente en las props del return.
+
+				VIDEO 46 TRAER DE FORMA ESTÁTICA LOS POKEMONS
+
+NOTA: los Barrelfiles son para el pattern Barrelimports.Bien,instalemos axios y creemos una instancia nuestra :
+
+import axios from "axios";
+
+const pokeApi = axios.create({
+  baseURL:'https://pokeapi.co/api/v2',
+  headers:{'Content-Type': 'application/json'}
+})
+
+export default pokeApi;
+
+Puedo ver que la data se me devuelve asi,teniendo que realizar otra petición encadenada:
+{ name: 'onix', url: 'https://pokeapi.co/api/v2/pokemon/95/' },
+{ name: 'drowzee', url: 'https://pokeapi.co/api/v2/pokemon/96/' },
+{ name: 'hypno', url: 'https://pokeapi.co/api/v2/pokemon/97/' },
+{ name: 'krabby', url: 'https://pokeapi.co/api/v2/pokemon/98/' },
+{ name: 'kingler', url: 'https://pokeapi.co/api/v2/pokemon/99/' },
+
+Además,esto está en data.results.Asi que será buena idea sacar el tipo de la response.
+
+				VIDEO 47 COLOCAR EL TIPO DE RESPUESTA EN AXIOS
+
+IMPORTANTE: fijate que la extensión del IDE requiere tener en el portapapeles toda la response a tipar.
+
+// Generated by https://quicktype.io
+/* fijate que la puta extensión requiere tener JSON en el portapapeles */
+export interface PokemonListResponse {
+  count:    number;
+  next?:     string;
+  previous?: string;
+  results:  SmallPokemon[];
+}
+
+export interface SmallPokemon {
+  name: string;
+  url:  string;
+}
+
+/* recuerda que estas funciones sólo se pueden ejecutar en pages y que se ejecutan en el lado del servidor */
+export const getStaticProps: GetStaticProps = async (ctx) => {
+  const { data } = await pokeApi.get<PokemonListResponse>("/pokemon?limit=151");
+  return {
+    props: {
+      pokemons: data.results,
+    },
+  };
+};
+
+export default HomePage;
+
+Desde luego este tipo de pasos son fundamentales.Podria probar a crear el adaptermañana.
+
+			VIDEO 48 TAREA - MOSTRAR NOMBRE Y NUMERO-ID DEL POKEMON
+
+Para la tarea necesitaré transformar la data para ver tanto el id como el svg.
+  const pokemons: SmallPokemon[] = data.results.map( (pokemon,index) => {
+     return {
+      id: index + 1,
+      name: pokemon.name,
+      url: pokemon.url,
+      img: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/${index + 1}.svg`,
+    }; 
+  });
+NOTA: si hago el build veré una nueva opción SSG marcada con un punto blanco:
+λ  (Server)  server-side renders at runtime (uses getInitialProps or getServerSideProps)
+●  (SSG)     automatically generated as static HTML + JSON (uses getStaticProps)
+Indicará que esa page está usando SSG
+
+IMPORTANTE: veré un index.json(o el nombre de la page.json) con la data para generar la página en el build.
+
+				VIDEO 49 MOSTRAR TARJETAS DE POKEMONS
+
+Es momento de crear unas tarjetas.LLegados a este punto,puedo observar que esta libreria pinta muy bien y tiene un acabado espectacular y muchas opciones:
+
+return (
+    <Layout title="Listado de pokemons">
+      <Grid.Container gap={2} justify="flex-start">
+        {pokemons.map((pokemon) => (
+          <Grid xs={6} sm={3} md={2} key={pokemon.id} xl={1}>
+            <Card cover hoverable clickable animated>
+              <Card.Body css={{ p: 1 }}>
+                <Card.Image 
+                  src={pokemon.img}
+                  alt={pokemon.name}
+                  width="100%"
+                  height={230}
+                />
+              </Card.Body>
+              <Card.Footer
+                blur
+                css={{
+                  position: "absolute",
+                  bgBlur: "#0f1114",
+                  borderTop: "$borderWeights$light solid $gray700",
+                  bottom: 0,
+                  zIndex: 1,
+                }}
+              >
+                <Row justify="space-between">
+                  <Text transform="capitalize" >{pokemon.name}</Text>
+                  <Text>#{pokemon.id}</Text>
+                </Row>
+              </Card.Footer>
+            </Card>
+          </Grid>
+        ))}
+      </Grid.Container>
+    </Layout>
+  );
+
+					VIDEO 50 COMPONENTE PARA LAS TARJETAS
+
+Dado que es mejor crear un componente para cada tarjeta hagamoslo.Fijate que la mejor idea es usar React.FC<T>.Fijate que va genial.Acostumbrate,ya que laboralmente también es la mejor opción.
+
+			VIDEO 51 RECIBIR ARGUMENTOS POR URL Y NAVEGACIÓN
+
+Hay varias tecnicas para navegar,ya hemos visto el <Link> de Next,que hace un barrido por los que haya en pantalla y los cachea,pero no permitia estilizarlos,por ello se embebe una <anchor> y se estiliza a ella.
+
+Pero esta vez vamos a hacerlo de otra manera.Fijate además que sabemos que sólo va a haber 151 pokemones,y más importante aún,ya sé de antemano qué información voy a mostrar(sé que el 1 es bulbasaur,no va a cambiar,que el 2 es pikachu,etc...)
+NOTA: y si cambiará está la feature que nos ofrece Next ISR(Incremental Static Regeneration),que ya veremos.
+
+Bien,en cuanto a como crear una ruta dinámica en Next nada nuevo,creo un file en pokemon/[id].tsx con la export por default( recuerda que las pages van por default) y ahora puedo rescatar ese id tanto en el lado del servidor como del frontend:
+
+Primero navego desde la Card
+ <Card cover hoverable clickable animated
+      onClick={() => router.push(`/pokemon/${pokemon.id}`)}>
+NOTA: router.push({}) o router.push("") lleva varias firmas.Puede ser un objeto,aunque normalmente es un string.
+
+Bien,si voy a la page dinámica pokemon/[id] veré ese id en router.query(fijate que el router en Next vale para todo)
+
+IMPORTANTE: Udemy realiza ISR(cada 24h recachea todo).Mediante ISR puedo indicar a Next un tiempo y Next recacheará lo indicado de nuevo
+
+Pero antes de comprender el ISR tengo que dominar el SSG,pero esta vez,con argumentos.
+
+				VIDEO 52 NEXT GET STATIC PATHS
+
+Cuando yo exporte la función getStaticPaths(SSG) desde una página que use ruteo dinámico(como es el caso de pages/pokemon/[id]) Next.js pre-renderizará estáticamente todos los paths indicados en getStaticPaths(fijate que es la homóloga de getStaticProps)
+
+NOTA: recuerda que tanto getStaticProps como getStaticPaths guardarán HTML + JSON
+Y recuerda que las páginas no cambian(aunque se pidan dinámicamente,el 1 siempre será el mismo pokemon,el 2 igual,etc)
+
+IMPORTANTE: no sólo tengo que usar getStaticPaths por ser una página dinámica,sino que no podría usar getStaticProps por ello(veré el error por la UI).Debo usar getStaticPaths en cuanto sea una página dinámica([id].tsx).
+
+IMPORTANTE: al usar SSG en una page dinámica y por ello su método getStaticPaths tengo que pasar los params como un string(ya que son un string) y además un tipo de fallback:
+
+export const getStaticPaths: GetStaticPaths = async (ctx) => {
+  return {
+    paths: [ { params: { id: "1" }, }, ],
+    fallback: "blocking", <- normalmente usaré false
+  };
+};
+
+NOTA: getStaticPaths requiere de getStaticProps también,no tiene sentido por sí solo.Recuerda también que ambas funciones se ejecutan en el servidor.
+
+		VIDEO 153 GENERANDO LAS 151 PÁGINAS ESTÁTICAS PARA CADA POKEMON
+
+Obviamente primero tendré que generar un arreglo de strings con valores del "1" al "151".Cualquier forma valdŕa:
+const pokemons151 = [...Array(151).keys()].map(x => String(x+1));
+
+Ya sólo falta crear el bucle para el arreglo de paths:
+ paths: pokemons151.map(id => ({ params: { id } })), <- fijate en que id:id se computará a id: "1", id: "2"
+
+IMPORTANTE: una vez dicho a Next cuales son todos los paths que quiero cachear,tengo que usar getStaticProps,y realizar la petición:
+
+/* getStaticProps recibirá los paths de getStaticPaths en ctx. */
+export const getStaticProps: GetStaticProps = async (ctx) => {
+  /* al loro con esto,asinto, castea desde la propiedad padre */
+  const { id } = ctx.params as { id: string };
+
+  const { data } = await pokeApi.get<PokemonResponse>(`/pokemon/${id}`);
+  return {
+    props: {
+      pokemon: data,
+    },
+  };
+};
+
+Fijate que el id lo necesitamos para pedir el pokemon(realmente no creo que tenga nada que ver getStaticPaths,el ctx.params también accede al param.
+
+IMPORTANTE: es muy importante entender que en modo dev no puedo apreciar bien lo que está sucediendo,pues cada refresh hace que Next ejecute todo otra vez,pero el objetivo es que se haga el build una vez y se cacheen los 151 posibles destinos una vez(puedo ver esto con un yarn build)
+Inclusive al dejar el console.log puedo ver que ha pedido las 151 páginas al hacer el build(fijate lo poderoso que es Next):
+
+┌ ● / (326 ms)                             5.39 kB        98.1 kB
+├   /_app                                  0 B              86 kB
+├ λ /404                                   192 B          86.2 kB
+├ λ /api                                   0 B              86 kB
+├ λ /api/pokeApi                           0 B              86 kB
+└ ● /pokemon/[id] (35660 ms)               880 B          93.6 kB
+    ├ /pokemon/2 (382 ms)
+    ├ /pokemon/149 (343 ms)
+    ├ /pokemon/150 (332 ms)
+    ├ /pokemon/148 (331 ms)
+    ├ /pokemon/61 (315 ms)
+    ├ /pokemon/65 (313 ms)
+    ├ /pokemon/145 (313 ms)
+    └ [+144 more paths]
+
+Obviamente tardó 35 segundos ya que ha cacheado 151 paginas el illoputa.Esto lo hará sólo una vez,ojo.Puedo hacer el yarn start y comprobar todo eso.
+NOTA: no hay tiempos de carga,jaja.Increible
+
+					VIDEO 54 DISEÑO DE LA PÁGINA DE POKEMON
+
+Fijate que a la hora de utilizar SSG tengo que tener cuidado,en este caso la petición devuelve mucha data y el json que se generará ocupará espacio en el disco duro del cliente.
+La recomendación de Next(y Fernando) es ser meticulosos con lo que se almacene.En este ejemplo dejaremos la respuesta así de extensa,pero no es lo que debo hacer en una aplicación real.
+En cuanto al componente fijate de nuevo que esta libreria es bastante bonita,quizás también bastante informal.
+
+				VIDEO 55 NAVEGACIÓN Y PÁGINA DE FAVORITOS
+
+Fijate como he tenido que renombrar el Link de Next dado que se llama igual que el Link de NextUI(hay que usar el LInk de la libreria porque el Link de Next no permite tener múltiples hijos,asi que se le pasa un único hijo que es el Link de NextUI,el cual obviamente si permite tener dos Text como hijos:
+
+import NextLink from "next/link";
+import { Link, Spacer, Text, useTheme } from "@nextui-org/react";
+
+      <NextLink href="/" passHref>
+        <Link>
+          <Text color="white" h2>
+            P
+          </Text>
+          <Text color="white" h3>
+            okémon
+          </Text>
+        </Link>
+      </NextLink>
+
+Hago lo mismo para el otro link,fijate que el Link de la libreria ya trae el cursor pointer.
+
+				VIDEO 56 RESUMEN DE LA SECCIÓN
+
+Fijate que basicamente tenemos una aplicación de React,a excepción de la parte de las staticProps.
+Las staticProps generan al hacer el build archivos .html + .json los cuales cacheará y llamará en runtime(no hará peticiones a la API).
+NOTA: fijate que realizó 151 peticiones a la API al realizar el build,realmente no me importa,pues la data no va a cambiar.
+Recuerda también que las funciones getStaticProps,getStaticPaths,etc se ejecutan SOLO en el servidor.
+
+IMPORTANTE: a pesar de tener 151 páginas generadas estáticamente yo aún puedo operar sobre ellas(pulsar en botones,guardarlas en favoritos,...)Fijate en este detalle,aún puedo tener funcionalidad sobre ellas,aunque estan cacheadas.
+A esto se le llama 'hidratar la página con código de React' <- en realidad también puede ser con Javascript(simplemente 'hidratar la página').
+Hidrataremos la página posteriormente(por ejemplo,podría traer la sección de comentarios bajo demanda,cada vez que se visite la página,pero tener las cards estáticas).Fijate que Udemy hace esto con los precios y las desc de los cursos.
+
+NOTA: fijate que todo esto me debe llevar a pensar desde un principio qué es lo que quiero cachear y qué no.
