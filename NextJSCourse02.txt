@@ -123,6 +123,63 @@ IMPORTANTE: realmente la API nos devuelve demasiada data.Sería mejor solo coger
 
 Dado que las dos peticiones son similares puedo resumir un poco todo:
 
+export const getPokemonInfo = async (nameOrId: string) => {
+  const { data } = await pokeApi.get<PokemonResponse>(`pokemon/${nameOrId}`)
 
+  return {
+    name: data.name,
+    id: data.id,
+    sprites: data.sprites
+  }
+Ahora las dos llamadas a getStaticProps serán mucho más simple:
+export const getStaticProps: GetStaticProps = async (ctx) => {
+  const { name } = ctx.params as { name: string };
 
+  return {
+    props: {
+      pokemon: await getPokemonInfo(name),
+    },
+  };
+};
 
+TIP: por último vamos a usar url friendly.En vez de usar pokemon/5 es mejor usar una url tipo name/bulbasaur.A los bots de Google les interesa que la url sea amigable y penalizarán que no lo sea.
+ onClick={() => router.push(`/name/${pokemon.name}`)}
+
+				VIDEO 73 OPEN GRAPH META TAGS		
+
+Parte de ser SEO friendly es que se pueda compartir en redes los productos que se están vendiendo,etc.
+Con Open Graph Meta Tags se puede conseguir esto.Estas tags irán en el <head>  siempre comienzan con og antes de la property(de open graph?):
+
+<meta property="og:title" content="How to Become an SEO Expert (8 Steps)" />
+<meta property="og:description" content="Get from SEO newbie to SEO pro in 8 simple steps." />
+<meta property="og:image" content="https://ahrefs.com/blog/wp-content/uploads/2019/12/fb-how-to-become-an-seo-expert.png" />
+
+Parece que sólo valen para Facebook,para pasarle una imagen,title,description para cuando se vea mi contenido en Facebook.
+TIP: para ver la url actual lo tengo en window.location.origin:
+
+const origin = (typeof window !== "undefined" && window.location.origin) || "";
+<meta property="og:title" content={`Información sobre ${title}`} />
+<meta property="og:description" content={`Esta es la página sobre ${title}`} />
+<meta property="og:image" content={`${origin}/img/banner.png`} />
+
+				VIDEO 74 DESPLIEGUE EN VERCEL
+
+Lo mejor es desplegarlo mediante un repo remoto en Github | Gitlab o BitBucket.
+OJO: hay que especificar la rama remota a desplegar,ya que Vercel espera que sea main.O hago una PR contra main,o especifico la rama.
+Tras el deploy podría pegar una url de un pokemon en Facebook(al tratar de crear un post) y debería ver como funcionan los meta tags og.
+NOTA: cada red social tiene unos meta tags que reconoce,los de Twitter o Instagram serán diferentes,en este ejemplo sólo hemos usado el estandar.
+
+TIP: Vercel se quedará en modo watch con esa rama.Cualquier commit sucesivo hará el pre-deploy de la app.
+
+		SECCION 06 ISR - INCREMENTAL STATIC REGENERATION & ISG - INCREMENTAL STATIC GENERATION 
+
+Esta sección es muy pequeña,pero el ISR es algo que debo conocer.Mediante Incremental Static Regeneration puedo volver a generar(regeneration) todo lo que tenia en estático(mediante Static Site Generation)cada determinado tiempo(24h,5h 7d,...)
+
+La primera conexión de un usuario que pida los datos tras ese tiempo será la única que consulte a la API,las demás se servirán desde el file system donde está la app,ya que en esa primera ocasión se recreará la caché.
+En resumen,mediante ISG creo un cache cada X tiempo(a diferencia de SSG que creó una única cache).
+
+Esta es una sección pequeña pero nos ayudará a comprender sobre dos formas de expandir nuestra generación estática con una configuración muy simple.
+
+El objetivo es que nuestro servidor de Next pueda almacenar respuestas para su futuro uso y a la vez que pueda revalidar el contenido previamente generado.
+
+Hay que tener en cuenta que si eligo 24h no podré cambiar nada durante cada intervalo de 24h,podría ser mucho tiempo o demasiado poco,...
