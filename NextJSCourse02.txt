@@ -183,3 +183,87 @@ Esta es una sección pequeña pero nos ayudará a comprender sobre dos formas de
 El objetivo es que nuestro servidor de Next pueda almacenar respuestas para su futuro uso y a la vez que pueda revalidar el contenido previamente generado.
 
 Hay que tener en cuenta que si eligo 24h no podré cambiar nada durante cada intervalo de 24h,podría ser mucho tiempo o demasiado poco,...
+
+		VIDEO 80-81 CONTINUACIÓN ISG - INCREMENTAL STATIC REGENERATION
+
+Parece que voy a ver también las diferencias entre Static Site Generation y Static Site Regeneration.
+Recuerda que al llamar a getStaticProps en una NextPage hago que sea estatica y cacheada en build time.
+TIP: realmente ya sabia las diferencias entre SSG y SSR(StaticSiteRegeneration).El primero lo hace una vez,el segundo lo puede repetir en base a un calendario.
+Bien,vamos a simular a Udemy,que usa ISR cada 24 horas o asi.
+
+IMPORTANTE: para usar ISR simplemente hay que usar la propiedad revalidate en el getStaticProps:
+  return {
+    props: {
+      posts,
+    },
+    // Next.js will attempt to re-generate the page:
+    // - When a request comes in
+    // - At most once every 10 seconds
+    revalidate: 10, // In seconds
+  }
+
+Asi pues elegimos 24h de momento(fijate que es mejor pasarle el cálculo ya hecho para mayor eficiencia:
+  return {
+    props: {
+      pokemon: await getPokemonInfo(id),
+    },
+    revalidate: 86400,//(60seg*60min*24horas)
+  };
+
+					VIDEO 82 PARTE DOS ISG 
+
+NOTA: recuerda que yo tengo cacheado 151 pokemons,pero en la API hay más de mil.Seria genial que de alguna forma pudiera agregarle a esa cache los restantes sin tener que hacer el build.
+Es decir,queremos pedir el pokemon 152 y si existiera añadir la página(pero encima en runtime)<- fakin NextJS
+IMPORTANTE: recuerda que para ver la página de error habia puesto en el getStaticPaths la propieda fallback a true.Este true no dejará pasar al ISR si existiera la page 152,asi que para usar ISR hay que cambiar fallback a 'blocking'
+
+NOTA: si bien esto funciona ya al buscar un pokemon nuevo que si existe,hay que comprobar y desarrollar la lógica para cuando no exista.Para ello basta con meter en un try catch las peticiones(mediante el helper) a la API:
+
+export const getPokemonInfo = async (nameOrId: string) => {
+  try {
+    const { data } = await pokeApi.get<PokemonResponse>(`pokemon/${nameOrId}`)
+
+    return {
+      name: data.name,
+      id: data.id,
+      sprites: data.sprites
+    }
+
+  } catch (error) {
+    return null;
+  }
+* Un simple null me valdrá.Fijate que permanent en false lo hizo Fernando porque podría ser que esa ruta que ahora no existe existiera en el futuro y la querríamos en el historial si sucediera eso:
+  
+if(!pokemon) {
+    return {
+      redirect:{
+        destination: '/',
+        permanent: false //tiene más sentido del que parece
+      }
+    }
+  }
+
+Y ya está,(recuerda que yarn start levanta la app de producción).Bien,si hago el yarn build veré de nuevo que tengo 151html+json.Pero si levanto la app con yarn start(en  producción) cada petición a un nuevo pokemon que existe y no está cacheado Next lo añade a la cache,al filesystem(lo puedo ver perfectamente).
+Esto es la ISR en todo su esplendor,increible.
+El siguiente video es una tarea,hacer lo mismo para el name.
+
+			SECCION 07 OPENJIRA EJERCICIO CON MATERIAL UI
+
+Vamos a empezar una nueva aplicación la cual simulará el dashboard de Jira.Crearemos la funcionalidad de crear tareas,borrarlas,editarlas,etc...
+Sin embargo lo importante es que lo haré con la función getServerSideProps,la cual Next va a ejecutar bajo demanda.Esto es muy poderoso,ya que pre-fetchea la data,mejorando la UserExperience.
+Usaremos la API interna de Next,en vez de una externa.
+Estilizaremos con Material UI
+
+Esta sección principalmente se enfoca en la creación del estado global de la interfaz de usuario y la creación de snippets que nos permitan crear todo el cascarón rápidamente.
+
+Puntualmente veremos:
+1- Manejo del contexto
+2- Material UI
+3- Temas de Material UI
+4- Creación de snippets
+Entre otras cosas importantes.
+	
+
+
+
+
+

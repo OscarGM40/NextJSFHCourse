@@ -108,19 +108,31 @@ export const getStaticPaths: GetStaticPaths = async (ctx) => {
 
   return {
     paths: pokemons151.map((id) => ({ params: { id } })),
-    fallback: false, //ojo que blocking deja pasar,al contrario de lo que pueda parecer,false si bloqueará cualquiera acceso que no esté definido en los paramas
+    // fallback: false, //ojo que blocking deja pasar,al contrario de lo que pueda parecer,false si bloqueará cualquiera acceso que no esté definido en los params y muestra la pagina 404(no es compatible con ISR)
+    fallback: "blocking",//si quiero ISR debo ponerlo en blocking
   };
 };
 
 /* getStaticProps recibirá los paths de getStaticPaths en ctx. */
 export const getStaticProps: GetStaticProps = async (ctx) => {
-  /* al loro con esto,asinto, castea desde la propiedad padre */
   const { id } = ctx.params as { id: string };
-
+  const pokemon = await getPokemonInfo(id);
+  /* quedaría mejor redireccionarle a la 404.Con permanent a true */
+  if(!pokemon) {
+    return {
+      redirect:{
+        destination: '/',
+        permanent: false
+      }
+    }
+  }
+  
   return {
     props: {
-      pokemon: await getPokemonInfo(id),
+      pokemon,
     },
+    /* no es buena idea pasar 60*60*24,es más eficiente pasarle el cálculo */
+    revalidate: 86400,//(60seg*60min*24horas)
   };
 };
 
