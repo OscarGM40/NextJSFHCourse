@@ -262,8 +262,102 @@ Puntualmente veremos:
 4- Creación de snippets
 Entre otras cosas importantes.
 	
+			VIDEO 88-89 INICIO PROYECTO - INSTALACIÓN MATERIAL UI 
 
+Iniciamos un nuevo proyecto con yarn create next-app --typescript.
+NOTA: MUI usa emotion como styling engine por defecto.Si quisiera podría usar styled-components(requerirá de otras dependencias a instalar).En este proyecto seguiremos con emotion como motor de estilos:
+npm install @mui/material @emotion/react @emotion/styled <- recuerda usar yarn add si voy con yarn.
 
+También pide la fuente y los iconos,ambos puedo usar la CDN.En el caso de los iconos tiene sus pros y contras,ya que la CDN trae todo.Si los instalo asi:
+yarn add @mui/icons-material 
+favoreceré el tree shaking ya que sólo los iconos que use formarán parte del bundle final de la app(a saber si es cierto).
+
+IMPORTANTE: fijate que vamos a crear el file _document.tsx y con un snippet rellenarlo.Asi tendremos más control sobre el document.
+De paso le agrego la CDN para la fuente en el Head de Next de ese file.
+
+IMPORTANTE: desde ya vamos a aprovecharnos de esta libreria y settear un custom theme con la paleta del mode dark.Fijate que requiere de un CssReset:
+
+const basicTheme = createTheme({
+  palette: {
+    mode: 'dark',
+  }
+})
+
+function MyApp({ Component, pageProps }: AppProps) {
+  return (
+    <ThemeProvider theme={basicTheme}>
+      <CssBaseline /> <- debo resetear los estilos para usar createTheme
+      <Component {...pageProps} />
+    </ThemeProvider>
+  );
+
+Perfecto,no puede ser más sencillo cambiar el tema.
+
+			VIDEO 90 CREANDO TEMAS EN MATERIAL UI
+
+Realmente debo siempre pensar en reusabilidad y mantenibilidad.La forma anterior de meter un tema en duro en un archivo no es la correcta.Asi que creo el folder themes y el index.ts para trabajar con el patrón barrel:
+
+Creo dos files con el mode light y dark y los exporto a través del barrel file
+export const lightTheme = createTheme({
+  palette: {
+    mode: 'light',
+    background:{
+      default: grey[300],
+    }
+  }
+})
+
+Fijate como puedo crear los temas que quiera y cambiarlos en runtime,etc.
+De echo vamos a settear algunos colores al gusto:
+    primary: {
+      main: '#4a148c',
+    },
+    secondary: {
+      main: '#19857b',
+    },
+    error: {
+      main: red.A400, <- 400 es el grado de intensidad
+    }
+  }
+					VIDEO 91 CREAR LAYOUT Y NAVBAR
+
+Si bien sólo vamos a tener un layout voy a crear el folder layouts por si tuviera más despues.
+Creo el archivo components/layouts/Layout.tsx y devuelvo un Box.
+
+TIP: la prop sx es como el atributo style en html o css en otras librerias.Me permite añadir un estilo en linea,pero además tiene acceso al theme de MUI actual.
+Me permite pasar cualquier css(en casi cualquier componente).TIP: puede que venga de extended style(o no).
+
+Fijate como puedo pasar un objeto con cualquier prop o sobrescribir un estilo de cualquier componente de la libreria:
+export const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    secondary: {
+      main: '#19857b',
+    },
+    error: {
+      main: red.A400,
+    },
+  },
+  components:{
+    MuiAppBar:{
+      defaultProps:{},
+      styleOverrides:{
+        root: {
+          backgroundColor: '#4a148c',
+        }
+      }
+    }
+  }
+})
+TIP: un Button será un MuiButton,una AppBar será una MuiAppBar,...
+NOTA: fijate que por ejemplo podría pasar la elevation en 0 o en 2 a todo el tema.Fijate que es una prop,no es css luego va en defaultProps:
+  components:{
+    MuiAppBar:{
+      defaultProps:{
+        elevation: 0,
+      },
+
+						VIDEO 93 CREANDO EL SIDEBAR
 
 
 
