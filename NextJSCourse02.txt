@@ -359,5 +359,78 @@ NOTA: fijate que por ejemplo podría pasar la elevation en 0 o en 2 a todo el te
 
 						VIDEO 93 CREANDO EL SIDEBAR
 
+En MUI el típico Sidebar se conoce como Drawer.Puedo ver en la doc de la libreria que hay muchos,y muy útiles,como el típico que se recoge a iconos para dashboards.
+ <Drawer anchor="left" open={true} onClose={() => console.log("cerrando")}>
+      {/* un box es como un div,nada más */}
+      <Box sx={{ width: "250px", }} >
+        
+        <Box sx={{ padding: "5px 10px" }}>
+          <Typography variant="h4">Menú</Typography>
+        </Box>
 
+        <List>
+          {menuItems.map((text, index) => (
+            <ListItem button key={text}>
+              <ListItemIcon>
+                {index % 2 === 0 ? <InboxOutlined /> : <MailOutlined />}
+              </ListItemIcon>
+              <ListItemText primary={text} />
+            </ListItem>
+          ))}
+        </List>
 
+        <Divider />
+
+Fijate que Navbar y Sidebar están a la misma altura.Usaremos la Context API para almacenar estados globales desde ahora.
+
+						VIDEO 94 UI CONTEXT
+
+En toda aplicación que tenga cierto nivel de complejidad tengo que comunicar información entre componentes y que puedan reaccionar cuando una variable o propiedad cambia.
+Fijate que dejo un Snippet creado para crear un Context en TS.Entré con CTRL+SHIFT+p y 'userSnippets'.Despues seleccioné los globales:
+	 "Create a Context in ReactTS": {
+	 	"scope": "javascriptreact,typescriptreact",
+	 	"prefix": "reactcontext-create",
+	 	"body": [
+      "import { createContext } from 'react';",
+      "",
+      "interface ${1:XXX}Props {",
+      "  ${2:exampleProp}: ${3:boolean};",
+      "}",
+      "",
+      "export const ${1:XXX}Context = createContext({} as ${1:XXX}Props);",
+	 	],
+	 	"description": "Creates a context in TS-React"
+	 }
+}
+El scope muy importante.
+
+				VIDEO 95 CREANDO EL CONTEXT PROVIDER
+
+Turno de crear el Provider que consuma el Context y proveerlo a la app.También crearé un snippet para futuros casos.Fijate que es mejor idea de lo que parece.
+
+				VIDEO 96 CREANDO EL REDUCER Y SU SNIPPET
+
+El reducer es una función pura que recibe el state actual y una accion y produce el siguiente estado.
+import { UIState } from "./UIProvider";
+
+type UIAction = 
+| { type: 'UI - Open Sidebar'}
+| { type: 'UI - Close Sidebar'}
+
+export const uiReducer = (state: UIState,action: UIAction):UIState => {
+  switch (action.type) {
+    case 'UI - Open Sidebar':
+      return {
+        ...state,
+        sidemenuOpen:true
+      }
+    case 'UI - Close Sidebar':
+      return {
+        ...state,
+        sidemenuOpen:false
+      }
+    default:
+      return state;
+  }
+}
+Adicionalmente,creo el snipet para un reducer.
