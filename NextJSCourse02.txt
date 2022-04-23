@@ -434,3 +434,178 @@ export const uiReducer = (state: UIState,action: UIAction):UIState => {
   }
 }
 Adicionalmente,creo el snipet para un reducer.
+
+				VIDEO 99 USANDO EL CONTEXT UI
+
+Fijate que también es buena idea crear funciones en el componente Provider:
+
+export const UIProvider: FC<UIProviderProps> = ({ children }) => {
+  const [state, dispatch] = useReducer( uiReducer, UI_INITIAL_STATE);
+
+  const openSideMenu = () => {
+    dispatch({ type: 'UI - Open Sidebar' });
+  }
+
+  const closeSideMenu = () => {
+    dispatch({ type: 'UI - Close Sidebar' });
+  }
+
+  return (
+    <UIContext.Provider
+      value={{
+        // sidemenuOpen: state.sidemenuOpen,
+        ...state, //mejor usar el spread operator
+        openSideMenu,
+        closeSideMenu,
+      }}
+    >
+Diría que incluso necesario.Si está la posibilidad usala.
+NOTA:fijate que esto implica cambiar el primer state inicial al crear el context
+
+
+interface UIProps {
+  sidemenuOpen: boolean;
+  /* methods */
+  openSideMenu: () => void;
+  closeSideMenu: () => void;
+}
+Con todo esto puedo poner en el drawer que empiece en false y en el onClose se cierre:
+
+const Sidebar = () => {
+  const { sidemenuOpen,closeSideMenu } = useContext(UIContext);
+  return (
+    <Drawer anchor="left" open={sidemenuOpen} onClose={closeSideMenu}>
+
+Y en la Navbar le paso el open al onClick sobre el icono:
+const Navbar = () => {
+  const { openSideMenu } = useContext(UIContext);
+
+  return (
+    <AppBar position="sticky">
+      <Toolbar>
+        <IconButton size="large" edge="start" onClick={openSideMenu}>
+
+			SECCION 08 OPENJIRA APP -MANEJO DE ENTRADAS
+
+En esta sección vamos a hacer de manera local todo el manejo de entradas al dashbard.Trabajaremos con más elementos de Material UI y también crearemos nuestra propia implementación de un Drag and Drop (sin librerías de terceros)
+
+El objetivo principal es tener el control de las entradas y poder jugar con ellas a nuestra voluntad.
+
+				VIDEO 105 DISEÑO DE LA PANTALLA PRINCIPAL
+
+Recuerda que Next tiene una estructura para las pages muy concreta,asi que tendré en pages/index.ts lo que se vea en /,es decir en la pantalla principal.
+Fijate que no es mismo el breakpoint xs que la propiedad sx para agregar CSS en MUI.En cuanto a la UI tres columnas desde sm y 1 en xs.Todo bastante sencillo:
+
+const Home: NextPage = () => {
+  return (
+    <Layout title="Home - OpenJira">
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={4}>
+          <Card sx={{ height: "calc(100vh - 100px)", }} >
+            {/* cardheader es self-closed */}
+            <CardHeader title="Pendientes" />
+            <CardContent>
+              {/* agregar una nueva entrada */}
+              {/* listado de las entradas */}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={4}>
+          <Card sx={{ height: "calc(100vh - 100px)", }} >
+            <CardHeader title="En Progreso" />
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={4}>
+          <Card sx={{ height: "calc(100vh - 100px)", }} >
+            <CardHeader title="Completadas" />
+          </Card>
+        </Grid>
+      </Grid>
+    </Layout>
+  );
+
+NOTA: desde la v5 ya no es npm install @material/core sino @mui/material.Es decir que estoy trabajando con material UI pero la version 5.
+La web es https://mui.com/
+
+			VIDEO 106 ENTRIES CONTEXT - CONTEXTO PARA LAS ENTRADAS
+
+Recuerda que estamos simulando Jira,una entrada será una tarea más bien.Bien,lo primero es instalar uuid para generar identificadores únicos(parece que lo haremos más adelante).
+En cuanto al Contexto creamos todo lo relacionado para un EntriesContext.De momento poco más,hay que ver como luce una entrada antes de nada
+Fijate que rápido fue con los snippets,y encima los mejoramos.
+
+			VIDEO 107 INTERFACE ENTRY
+
+Creamos la interface para el tipado:
+export interface Entry {
+  _id: string;
+  description: string;
+  createdAt: number;
+  status: EntryStatus; 
+}
+
+export type EntryStatus = 'pending' | 'in-progress' | 'finished';
+
+Y también creo tres entradas hardcodeadas para empezar como estado inicial:
+
+const Entries_INITIAL_STATE: EntriesState = {
+  entries: [
+    {
+      _id: uuidv4(),
+      description:
+        'lNisi sint do eiusmod enim commodo eu laborum ea reprehenderit do.',
+      status: 'pending',
+      createdAt: Date.now(),
+    }, ...
+
+		VIDEO 108 ENTRYLIST Y ENTRYCARD - COMPONENTES PARA MOSTRAR ENTRADAS
+
+Comencemos creando un componente para listar las entradas segun tipo:
+const EntryList = () => {
+  return (
+    /* usaré un div en vez de un Box para ver al onDrag */
+    <div>
+      <Paper
+        sx={{
+          height: 'calc(100vh - 200px)',
+          overflow: 'auto',
+          backgroundColor: 'transparent',
+          padding: '1px 6px',
+        }}
+      >
+        {/* TODO: cambiar estilo si esta en onDrag */}
+        <List sx={{ opacity: 1 }}>
+          <EntryCard />
+        </List>
+      </Paper>
+    </div>
+  );
+};
+export default EntryList;
+
+Y el EntryCard también es bastante sencillo aún:
+const EntryCard = () => {
+  return (
+    <Card sx={{ marginBottom: 1 }}>
+      <CardActionArea>
+        <CardContent>
+          <Typography sx={{ whiteSpace: 'pre-line' }}>
+            Esto es la descripcion del
+          </Typography>
+        </CardContent>
+        <CardActions sx={{display:'flex',justifyContent: 'flex-end',paddingRight:2}}>
+          <Typography variant='body2'>hace 30 minutos</Typography>
+        </CardActions>
+      </CardActionArea>
+    </Card>
+  );
+};
+export default EntryCard;
+
+			VIDEO 109 MOSTRAR TARJETAS BASADO EN EL ESTADO DE LA ENTRADA
+
+
+	
+
+

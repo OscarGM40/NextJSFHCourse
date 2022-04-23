@@ -9,13 +9,18 @@ import {
   ListItemText,
 } from "@mui/material";
 import { InboxOutlined, MailOutlined } from "@mui/icons-material";
+import { useContext } from "react";
+import { UIContext } from "../../context/ui";
 
 const menuItems: string[] = ["Inbox", "Starred", "Send Email", "Drafts"];
 
 const Sidebar = () => {
+
+  const { sidemenuOpen,closeSideMenu } = useContext(UIContext);
+  
   return (
     /* anchor es la posicion */
-    <Drawer anchor="left" open={true} onClose={() => console.log("cerrando")}>
+    <Drawer anchor="left" open={sidemenuOpen} onClose={closeSideMenu}>
       {/* un box es como un div,nada más */}
       <Box sx={{ width: "250px", }} >
         
