@@ -1,23 +1,20 @@
-import { UIState } from "./UIProvider";
+import { UIState } from './UIProvider';
 
-type UIAction =
-  | { type: 'UI - Open Sidebar' }
-  | { type: 'UI - Close Sidebar' }
+type UIAction = { type: 'UI - Open Sidebar' } | { type: 'UI - Close Sidebar' };
 
 export const uiReducer = (state: UIState, action: UIAction): UIState => {
   switch (action.type) {
     case 'UI - Open Sidebar':
       return {
         ...state,
-        sidemenuOpen: true
-      }
+        sidemenuOpen: true,
+      };
     case 'UI - Close Sidebar':
       return {
         ...state,
-        sidemenuOpen: false
-      }
+        sidemenuOpen: false,
+      };
     default:
       return state;
-
   }
-}
+};

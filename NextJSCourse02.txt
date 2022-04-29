@@ -605,7 +605,66 @@ export default EntryCard;
 
 			VIDEO 109 MOSTRAR TARJETAS BASADO EN EL ESTADO DE LA ENTRADA
 
+Segun qué columna sea vamos a filtrar por su estado.Dado que estoy en TS lo primero será mandarlo:
+<Grid item xs={12} sm={4}>
+    <Card sx={{ height: 'calc(100vh - 100px)' }}>
+      <CardHeader title="En Progreso" />
+    <CardContent>
+      <EntryList status="in-progress" />
+    </CardContent>
+    </Card>
+</Grid>
 
-	
+IMPORTANTE: fijate que si quiero ser mejor en React debo empezar a memorizar procesos pero ya.Recuerda diferenciar entre useMemo,que memoriza el retorno de una función y useCallback que memoriza sólo la función,luego faltará ejecutarla.Por lo demás son iguales:
+
+const EntryList: FC<Props> = ({ status }) => {
+  const { entries } = useContext(EntriesContext);
+
+  /*  a menos que los entries cambien por qué no memorizar este proceso? realmente es mejor que me devuelva el memorizado,no? */
+  const entriesByStatus = useMemo(
+    () => entries.filter((entry) => entry.status === status),
+    [entries]
+  );
+* Dado que estoy usando useMemo se me devolverá la memorización de la ejecución de ese filtrado.
+Desde ya debo acoplar esto a mi kit,sobre todo lo más básico.
+
+			VIDEO 110 AGREGAR ENTRADAS
+
+Para agregar una nueva entrada vamos a crear un nuevo componente.Fijate de nuevo  que bonito luce esta libreria,parece que incluso haya mejorado su UI en la v5.
+
+const NewEntry = () => {
+  return (
+    <Box sx={{ marginBottom: 2, paddingX: 1 }}>
+      <Button startIcon={<AddCircleOutlined />} fullWidth variant="outlined">
+        Agregar tarea
+      </Button>
+      <TextField
+        fullWidth
+        sx={{ marginTop: 2, marginBottom: 2 }}
+        autoFocus
+        multiline
+        placeholder="Agregar una nueva entrada"
+        label="Descripción"
+        helperText="Escribe aquí la descripción de la entrada"
+      />
+      <Box display="flex" justifyContent="space-between">
+        <Button variant="outlined">Cancelar</Button>
+        <Button variant="outlined" color="secondary" endIcon={<SaveOutlined />}>
+          Guardar
+        </Button>
+      </Box>
+    </Box>
+
+		VIDEO 111 TRABAJANDO SOBRE NUESTRO FORMULARIO
+
+Dado que el formulario es muy puntual vamos a manejarlo con un useState.Fijate que esta libreria me aporta la propiedad error en los TextField y similares para el manejo de error.Pondrá el control con bordes rojos si esa propiedad computa a true:
+TIP: fijate que Fernando ha mejorado mucho,y ofrece soluciones top como crear el useState para el touched.De esta forma puedo hacer esto:
+
+error={inputValue.length <= 0 && touched} <- primero tendrán que tocarlo.
+
+Y no sólo esto,sino que ya puedo condicionar el helperText con un ternario.
+IMPORTANTE: aún queda la guinda del pastel,ya que también quiero el onBlur y poner el campo a touched.Lo dejó perfecto FH.
+
+		VIDEO 112 INSERTAR ENTRADA EN EL ESTADO GLOBAL
 
 

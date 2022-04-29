@@ -14,21 +14,21 @@ interface UIProviderProps {
 }
 
 export const UIProvider: FC<UIProviderProps> = ({ children }) => {
-  const [state, dispatch] = useReducer( uiReducer, UI_INITIAL_STATE);
+  const [state, dispatch] = useReducer(uiReducer, UI_INITIAL_STATE);
 
   const openSideMenu = () => {
     dispatch({ type: 'UI - Open Sidebar' });
-  }
+  };
 
   const closeSideMenu = () => {
     dispatch({ type: 'UI - Close Sidebar' });
-  }
+  };
 
   return (
     <UIContext.Provider
       value={{
         // sidemenuOpen: state.sidemenuOpen,
-        ...state, //mejor usar el spread operator
+        ...state, // mejor usar el spread operator
         openSideMenu,
         closeSideMenu,
       }}

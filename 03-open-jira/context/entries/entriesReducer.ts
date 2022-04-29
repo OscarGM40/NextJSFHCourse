@@ -1,12 +1,10 @@
 import { EntriesState } from './';
 
-
-type EntriesAction =
-  | { type: '[Entries] - ActionName'; payload: {}; }
+type EntriesAction = { type: '[Entries] - ActionName' };
 
 export const entriesReducer = (state: EntriesState, action: EntriesAction) => {
   switch (action.type) {
- /*    case '[Entries] - ActionName':
+    /*    case '[Entries] - ActionName':
       return {
         ...state,
         prop: value,

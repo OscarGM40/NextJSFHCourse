@@ -7,24 +7,22 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-} from "@mui/material";
-import { InboxOutlined, MailOutlined } from "@mui/icons-material";
-import { useContext } from "react";
-import { UIContext } from "../../context/ui";
+} from '@mui/material';
+import { InboxOutlined, MailOutlined } from '@mui/icons-material';
+import { useContext } from 'react';
+import { UIContext } from '../../context/ui';
 
-const menuItems: string[] = ["Inbox", "Starred", "Send Email", "Drafts"];
+const menuItems: string[] = ['Inbox', 'Starred', 'Send Email', 'Drafts'];
 
 const Sidebar = () => {
+  const { sidemenuOpen, closeSideMenu } = useContext(UIContext);
 
-  const { sidemenuOpen,closeSideMenu } = useContext(UIContext);
-  
   return (
     /* anchor es la posicion */
     <Drawer anchor="left" open={sidemenuOpen} onClose={closeSideMenu}>
       {/* un box es como un div,nada más */}
-      <Box sx={{ width: "250px", }} >
-        
-        <Box sx={{ padding: "5px 10px" }}>
+      <Box sx={{ width: '250px' }}>
+        <Box sx={{ padding: '5px 10px' }}>
           <Typography variant="h4">Menú</Typography>
         </Box>
 
@@ -51,9 +49,7 @@ const Sidebar = () => {
             </ListItem>
           ))}
         </List>
-
       </Box>
-      
     </Drawer>
   );
 };
