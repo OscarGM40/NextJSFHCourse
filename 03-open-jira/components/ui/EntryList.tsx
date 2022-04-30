@@ -1,5 +1,5 @@
 import { List, Paper } from '@mui/material';
-import { FC, useContext, useMemo } from 'react';
+import { DragEvent, FC, useContext, useMemo } from 'react';
 import { EntriesContext } from '../../context/entries';
 import { EntryStatus } from '../../interfaces';
 import { EntryCard } from './';
@@ -17,9 +17,20 @@ const EntryList: FC<Props> = ({ status, color }) => {
     [entries]
   );
 
+  const onDropEntry = (event: DragEvent<HTMLDivElement>) => {
+    // event.preventDefault();
+    const id = event.dataTransfer.getData('ID');
+    console.log(id, 'id');
+  };
+
+  /* ojo,un div que reciba el drop necesita activar en el onDragOver esta caracteristica,se hace llamando al preventDefault  */
+  const allowDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+  };
+
   return (
-    /* usaré un div en vez de un Box para ver al onDrag */
-    <div>
+    /* usaré un div para tener visión sobre el evento nativo onDrop,y recibir el id de la card arrastrada,ya que ni Box ni Paper tienen ese evento programado en mui */
+    <div onDrop={onDropEntry} onDragOver={allowDrop}>
       <Paper
         sx={{
           height: 'calc(100vh - 230px)',

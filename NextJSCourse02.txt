@@ -667,4 +667,96 @@ IMPORTANTE: aún queda la guinda del pastel,ya que también quiero el onBlur y p
 
 		VIDEO 112 INSERTAR ENTRADA EN EL ESTADO GLOBAL
 
+Empezaré por el reducer.Fijate que yo sólo tengo un string desde el input,pero una Entry tiene un status,un createdAt y un _id único:
+
+type EntriesAction = { type: '[Entries] - Add-Entry'; payload: Entry };
+
+Ojo,el reducer no debe llevar lógica alguna, asi que la función la pongo en el provider :
+
+  const addNewEntry = (description: string) => {
+    const newEntry: Entry = {
+      _id: uuidv4(),
+      description,
+      status: 'pending',
+      createdAt: Date.now(),
+    };
+    dispatch({
+      type: '[Entries] - Add-Entry',
+      payload: newEntry,
+    });
+  };
+
+Ya sólo falta llamar a este método en cualquier lugar de la app.
+  const onSave = () => {
+    if (inputValue.length === 0) return;
+    addNewEntry(inputValue);
+    setInputValue('');
+    setTouched(false);
+    setIsAdding(false);
+  };
+
+				VIDEO 113 TAREA - IS ADDING 
+
+La tarea consiste en cambiar un useState por un estado global:
+
+ type: 'UI - setIsAddingEntry'; payload: boolean };
+  
+ case 'UI - setIsAddingEntry':
+      return {
+        ...state,
+        isAddingEntry: action.payload,
+      };
+
+Fijate que al estar en TS tendré que ir resolviendo los types.Perfecto.
+Ya solo falta cambiar el state por el context correspondiente.
+const { isAddingEntry, setIsAddingEntry } = useContext(UIContext);
+
+				VIDEO 114 DRAG AND DROG - FORMA MANUAL
+
+NOTA: uno de los paquetes más usados para hacer dnd en React es 'react-beautiful-dnd'.Fernando deja el link en los recursos y desde él se puede acceder a un video-tutorial en egghead muy bueno.Puedo observar que es muy poderoso.
+Sin embargo lo vamos a hacer manualmente,con el evento onDrag y sus relacionados.
+Obviamente va sobre una Card,y ya tenemos el componente EntryCard para cada Card.
+
+IMPORTANTE: la libreria mui me permite usar la propiedad boleana draggable sobre muchos elementos.Card es uno de ellos(debe soportarlo el browser donde se esté ejecutando mi app):
+<Card sx={{ marginBottom: 1, backgroundColor: color }} draggable>
+
+NOTA: fijate que onDrag va a ir acompañado del evento onDrop,y será el componente EntryList el que reciba ese evento.De echo,dejamos el componente en un <div> ya que ni <Paper> ni <Box> tienen visión sobre ese evento onDrop.Y recibiré el id de la card arrastrada gracias al event.dataTransfer.setData('text',entry._id).
+
+TIP: recuerda que puedo consultar el tipado de cada evento y que si me dice que es de tipo DragEventHandler se refiere a la función y es sólo DragEvent<Element
+
+Resumen: en el elemento a arrastrar establezco los evento dragStart y dragEnd y el boleano draggable, y en la zona donde se puede dejar esos elementos establezco el onDrop y el onDragOver:
+
+PASO UNO: 
+* En la Card a arrastrar le paso el id al empezar el drag 
+const onDragStart = (event: DragEvent<HTMLDivElement>) => {
+    event.dataTransfer.setData('ID', entry._id);
+};
+* Ya veré que necesito hacer al terminar el drag(ordenar,limpiar,etc...)
+  const onDragEnd = (e: DragEvent<HTMLDivElement>) => { };
+
+  return (
+    <Card
+      sx={{ marginBottom: 1, backgroundColor: color }}
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+    >
+PASO DOS:
+const onDropEntry = (event: DragEvent<HTMLDivElement>) => {
+   const id = event.dataTransfer.getData('ID');
+ }
+Fijate que setDate(key,value) puedo pasarle cualquier string como key,luego lo recupero con getData
+  /* ojo,un div que reciba el drop necesita activar en el onDragOver esta caracteristica,se hace llamando al preventDefault  */
+  const allowDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+  };
+
+  return (
+    /* usaré un div para tener visión sobre el evento nativo onDrop,y recibir el id de la card arrastrada,ya que ni Box ni Paper tienen ese evento programado en mui */
+    <div onDrop={onDropEntry} onDragOver={allowDrop}>
+
+De momento lo dejaré aqui.Fijate que es realmente sencillo programar un onDrag y parecia mucho más difícil,como siempre
+
+		VIDEO 115 CAMBIAR ASPECTO VISUAL DE LA CARD SOBRE LA QUE HAGO EL DRAG 
+
 
