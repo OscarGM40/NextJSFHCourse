@@ -5,26 +5,33 @@ import {
   CardContent,
   Typography,
 } from '@mui/material';
-import { DragEvent } from 'react';
+import { DragEvent, useContext } from 'react';
+import { UIContext } from '../../context/ui';
 import { Entry } from '../../interfaces';
 interface Props {
   entry: Entry;
   color: string;
+  isDragging: boolean;
 }
-const EntryCard: React.FC<Props> = ({ entry, color }) => {
+const EntryCard: React.FC<Props> = ({ entry, color, isDragging }) => {
+  const { startDragging, endDragging } = useContext(UIContext);
   const onDragStart = (event: DragEvent<HTMLDivElement>) => {
-    // TODO modificar el estado para saber que estoy arrastrando una card,también pondremos más opacas las card en este modo
+    startDragging();
     /* la event.dataTransfer me permite establecer cierto tipo de información(solo pueden ser strings),aplicando setData() */
     /* fijate que con el _id de la card ya me es suficiente */
     event.dataTransfer.setData('ID', entry._id);
-    console.log(event);
   };
-  const onDragEnd = (event: DragEvent<HTMLDivElement>) => {
-    // todo cancelar on drag
+  const onDragEnd = () => {
+    endDragging();
   };
   return (
     <Card
-      sx={{ marginBottom: 1, backgroundColor: color }}
+      sx={{
+        marginBottom: 1,
+        backgroundColor: color,
+        borderRadius: isDragging ? '8px' : '5px',
+        border: isDragging ? '2px solid white' : 'none',
+      }}
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}

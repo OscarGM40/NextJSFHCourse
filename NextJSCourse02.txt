@@ -1,251 +1,3 @@
-				SECCION 05 POKEMON STATIC - CONTINUACIÓN APP POKEMONS
-
-En esta sección nos vamos a preocupar en hidratar la aplicación.React es capaz de modificar ese contenido estático perfectamente.Fijate que esta feature es increiblemente poderosa.
-Recuerda,el hecho de que el contenido sea generado de manera estática no significa que no puedo modificarlo despues(incluso usaré useReducer).
-
-En esta sección trabajaremos con la hidratación de nuestro contenido estático con código de React. También aprenderemos a utilizar librerías de terceros aunque estas no fueran escritas en TypeScript.
-
-Adicionalmente hay varias tareas que nos ayudarán a reforzar todo lo aprendido hasta el momento.
-
-					VIDEO 62 GUARDAR EN LOCALSTORAGE
-
-Si intento acceder al localStorage de esta forma voy a ver este error:
-
-const PokemonPage: NextPage<Props> = ({ pokemon }) => {
-
-  const onToggleFavorite = () => {
-    localStorage.setItem('favorites',`${pokemon.id}`);
-  }
-  localStorage.getItem('favorites') <- aqui voy a ver que es el backend el que intenta acceder al localStorage y obviamente sólo existe en el frontend.
-
-Server Error
-ReferenceError: localStorage is not defined 
-
-Si bien hay librerias para poder acceder al localStorage desde el backend 
-Este error sucede porque en esa instrucción estoy en node y no sobre el objeto window:
-console.log(typeof window); <- si hago esto veré que da undefined en la consola del servidor pero que devuelve un objeto en la consola del browser.
-Con todo esto en mente vamos a resolver la tarea pues
-
-			VIDEO 63 GUARDAR EN EL LOCALSTORAGE EL ARREGLO DE FAVORITOS
-
-Dado que hay que usar un arreglo y es una función auxiliar lo mejores crearla como una utilidad:
-
-const toggleFavorite = (id: number) => {
-
-  const favorites: number[] = JSON.parse(localStorage.getItem('favorites') || '[]');
-  
-  const isFavorited = favorites.includes(id);
-
-  if (isFavorited) {
-    const newFavorites = favorites.filter(pokeId => pokeId !== id);
-    localStorage.setItem('favorites', JSON.stringify(newFavorites));
-  } else {
-    localStorage.setItem('favorites', JSON.stringify([...favorites, id]));
-  }
-}
-
-export default {
-  toggleFavorite
-}
-
-				VIDEO 64 LEER Y VERIFICAR SI EXISTE EN FAVORITOS
-
-Ahora queremos cambiar el texto del boton de Favoritos(guardar/sacar de favoritos)
-Fijate que se nos presenta el mismo problema al estar en Next,ya que el componente tiene ámbito tanto en el servidor como en el browser(es porqué es una página?? o esto es para todo componente de React en Next??).
-Una simple validación filtrará esto:
-
-const existsInFavorites = (id: number): boolean => {
-  if(typeof window === 'undefined') return false;
-  const favorites: number[] = JSON.parse(localStorage.getItem('favorites') || '[]');
-  return favorites.includes(id);
-}
-Fijate que tendré que usar mucho typeof window al usar frameworks híbridos.
-
-						VIDEO 65 PANTALLA DE FAVORITOS
-
-Primeramente vamos a cargar en un efecto el array de ids:
-
-const Favorites: NextPage<Props> = () => {
-  const [favoritePokemons, setFavoritePokemons] = useState<number[]>([]);
-
-  useEffect(() =>{
-    setFavoritePokemons(localFavorites.pokemons);
-  },[])
-
-TIP: fijate que puedo ir a las devTools y buscar por el nombre del componente,ya que es una locura buscar en el árbol.Fijate que puedo ver su useState con su carga(en este caso veré el arreglo de ids) y el useEffect,...Muy interesante.
-
-			VIDEO 66 CONSTRUIR EL LISTADO DE POKEMONS FAVORITOS
-
-Simplemente seguir las instrucciones.Fijate que cuando se haga el build no veré el efecto de esta navegación:
- const router = useRouter();
-
-  const onFavoriteClicked = () => {
-    router.push(`/pokemon/${pokemonId}`);
-  };
-
-  return (
-    <Grid xs={6} sm={3} md={2} xl={1} key={pokemonId}>
-      <Card
-        hoverable
-        clickable
-        css={{ padding: "10px" }}
-        onClick={onFavoriteClicked}
-      >
-Ya que en el npm run dev estoy en el backend,pero esto será servido con SSG.Comprobarlo.
-
-				VIDEO 68 LIBRERIA EXTERNA CANVAS-CONFETTI
-
-NOTA: puedo hacer un hard refresh con CTRL+SHIFT+r.
-Esta libreria CanvasConfetti puede ser un tanto llamativa pero la vamos a usar:
->npm i canvas-confetti 
-> npm i @types/canvas-confetti -D
-Para usarla simplemente hay que configurar el método confetti:
-
-  if(!isInFavorites){
-    confetti({
-    zIndex:999,
-    particleCount:100,
-    spread: 160,
-    angle: -100,
-    origin:{
-      x:0.9,
-      y:0.1
-    }
-    })
-  }
-
-				TAREA 69 POKEMON BY NOMBRE
-
-Seguir las instrucciones.Recuerda que debo especificar todos los paths posibles.
-IMPORTANTE: realmente la API nos devuelve demasiada data.Sería mejor solo coger la necesaria antes de cachearla.
-
-				VIDEO 72 CENTRALIZAR LA DATA 
-
-Dado que las dos peticiones son similares puedo resumir un poco todo:
-
-export const getPokemonInfo = async (nameOrId: string) => {
-  const { data } = await pokeApi.get<PokemonResponse>(`pokemon/${nameOrId}`)
-
-  return {
-    name: data.name,
-    id: data.id,
-    sprites: data.sprites
-  }
-Ahora las dos llamadas a getStaticProps serán mucho más simple:
-export const getStaticProps: GetStaticProps = async (ctx) => {
-  const { name } = ctx.params as { name: string };
-
-  return {
-    props: {
-      pokemon: await getPokemonInfo(name),
-    },
-  };
-};
-
-TIP: por último vamos a usar url friendly.En vez de usar pokemon/5 es mejor usar una url tipo name/bulbasaur.A los bots de Google les interesa que la url sea amigable y penalizarán que no lo sea.
- onClick={() => router.push(`/name/${pokemon.name}`)}
-
-				VIDEO 73 OPEN GRAPH META TAGS		
-
-Parte de ser SEO friendly es que se pueda compartir en redes los productos que se están vendiendo,etc.
-Con Open Graph Meta Tags se puede conseguir esto.Estas tags irán en el <head>  siempre comienzan con og antes de la property(de open graph?):
-
-<meta property="og:title" content="How to Become an SEO Expert (8 Steps)" />
-<meta property="og:description" content="Get from SEO newbie to SEO pro in 8 simple steps." />
-<meta property="og:image" content="https://ahrefs.com/blog/wp-content/uploads/2019/12/fb-how-to-become-an-seo-expert.png" />
-
-Parece que sólo valen para Facebook,para pasarle una imagen,title,description para cuando se vea mi contenido en Facebook.
-TIP: para ver la url actual lo tengo en window.location.origin:
-
-const origin = (typeof window !== "undefined" && window.location.origin) || "";
-<meta property="og:title" content={`Información sobre ${title}`} />
-<meta property="og:description" content={`Esta es la página sobre ${title}`} />
-<meta property="og:image" content={`${origin}/img/banner.png`} />
-
-				VIDEO 74 DESPLIEGUE EN VERCEL
-
-Lo mejor es desplegarlo mediante un repo remoto en Github | Gitlab o BitBucket.
-OJO: hay que especificar la rama remota a desplegar,ya que Vercel espera que sea main.O hago una PR contra main,o especifico la rama.
-Tras el deploy podría pegar una url de un pokemon en Facebook(al tratar de crear un post) y debería ver como funcionan los meta tags og.
-NOTA: cada red social tiene unos meta tags que reconoce,los de Twitter o Instagram serán diferentes,en este ejemplo sólo hemos usado el estandar.
-
-TIP: Vercel se quedará en modo watch con esa rama.Cualquier commit sucesivo hará el pre-deploy de la app.
-
-		SECCION 06 ISR - INCREMENTAL STATIC REGENERATION & ISG - INCREMENTAL STATIC GENERATION 
-
-Esta sección es muy pequeña,pero el ISR es algo que debo conocer.Mediante Incremental Static Regeneration puedo volver a generar(regeneration) todo lo que tenia en estático(mediante Static Site Generation)cada determinado tiempo(24h,5h 7d,...)
-
-La primera conexión de un usuario que pida los datos tras ese tiempo será la única que consulte a la API,las demás se servirán desde el file system donde está la app,ya que en esa primera ocasión se recreará la caché.
-En resumen,mediante ISG creo un cache cada X tiempo(a diferencia de SSG que creó una única cache).
-
-Esta es una sección pequeña pero nos ayudará a comprender sobre dos formas de expandir nuestra generación estática con una configuración muy simple.
-
-El objetivo es que nuestro servidor de Next pueda almacenar respuestas para su futuro uso y a la vez que pueda revalidar el contenido previamente generado.
-
-Hay que tener en cuenta que si eligo 24h no podré cambiar nada durante cada intervalo de 24h,podría ser mucho tiempo o demasiado poco,...
-
-		VIDEO 80-81 CONTINUACIÓN ISG - INCREMENTAL STATIC REGENERATION
-
-Parece que voy a ver también las diferencias entre Static Site Generation y Static Site Regeneration.
-Recuerda que al llamar a getStaticProps en una NextPage hago que sea estatica y cacheada en build time.
-TIP: realmente ya sabia las diferencias entre SSG y SSR(StaticSiteRegeneration).El primero lo hace una vez,el segundo lo puede repetir en base a un calendario.
-Bien,vamos a simular a Udemy,que usa ISR cada 24 horas o asi.
-
-IMPORTANTE: para usar ISR simplemente hay que usar la propiedad revalidate en el getStaticProps:
-  return {
-    props: {
-      posts,
-    },
-    // Next.js will attempt to re-generate the page:
-    // - When a request comes in
-    // - At most once every 10 seconds
-    revalidate: 10, // In seconds
-  }
-
-Asi pues elegimos 24h de momento(fijate que es mejor pasarle el cálculo ya hecho para mayor eficiencia:
-  return {
-    props: {
-      pokemon: await getPokemonInfo(id),
-    },
-    revalidate: 86400,//(60seg*60min*24horas)
-  };
-
-					VIDEO 82 PARTE DOS ISG 
-
-NOTA: recuerda que yo tengo cacheado 151 pokemons,pero en la API hay más de mil.Seria genial que de alguna forma pudiera agregarle a esa cache los restantes sin tener que hacer el build.
-Es decir,queremos pedir el pokemon 152 y si existiera añadir la página(pero encima en runtime)<- fakin NextJS
-IMPORTANTE: recuerda que para ver la página de error habia puesto en el getStaticPaths la propieda fallback a true.Este true no dejará pasar al ISR si existiera la page 152,asi que para usar ISR hay que cambiar fallback a 'blocking'
-
-NOTA: si bien esto funciona ya al buscar un pokemon nuevo que si existe,hay que comprobar y desarrollar la lógica para cuando no exista.Para ello basta con meter en un try catch las peticiones(mediante el helper) a la API:
-
-export const getPokemonInfo = async (nameOrId: string) => {
-  try {
-    const { data } = await pokeApi.get<PokemonResponse>(`pokemon/${nameOrId}`)
-
-    return {
-      name: data.name,
-      id: data.id,
-      sprites: data.sprites
-    }
-
-  } catch (error) {
-    return null;
-  }
-* Un simple null me valdrá.Fijate que permanent en false lo hizo Fernando porque podría ser que esa ruta que ahora no existe existiera en el futuro y la querríamos en el historial si sucediera eso:
-  
-if(!pokemon) {
-    return {
-      redirect:{
-        destination: '/',
-        permanent: false //tiene más sentido del que parece
-      }
-    }
-  }
-
-Y ya está,(recuerda que yarn start levanta la app de producción).Bien,si hago el yarn build veré de nuevo que tengo 151html+json.Pero si levanto la app con yarn start(en  producción) cada petición a un nuevo pokemon que existe y no está cacheado Next lo añade a la cache,al filesystem(lo puedo ver perfectamente).
-Esto es la ISR en todo su esplendor,increible.
-El siguiente video es una tarea,hacer lo mismo para el name.
-
 			SECCION 07 OPENJIRA EJERCICIO CON MATERIAL UI
 
 Vamos a empezar una nueva aplicación la cual simulará el dashboard de Jira.Crearemos la funcionalidad de crear tareas,borrarlas,editarlas,etc...
@@ -758,5 +510,95 @@ Fijate que setDate(key,value) puedo pasarle cualquier string como key,luego lo r
 De momento lo dejaré aqui.Fijate que es realmente sencillo programar un onDrag y parecia mucho más difícil,como siempre
 
 		VIDEO 115 CAMBIAR ASPECTO VISUAL DE LA CARD SOBRE LA QUE HAGO EL DRAG 
+
+Fijate que es bastante sencillo.Habrá que establecer en el contexto global la propiedad isDragging y establecer un estilo css para el que tenga ese isDragging a true.Hagamoslo:
+En el reducer creamos dos action creators:
+  | { type: 'UI - StartDragging' }
+  | { type: 'UI - EndDragging' };
+Con su lógica:
+    case 'UI - StartDragging':
+      return {
+        ...state,
+        isDragging: true,
+      };
+    case 'UI - EndDragging':
+      return {
+        ...state,
+        isDragging: false,
+      };
+Las disparo y abastezco esa función disparadora en el provider:
+  const startDragging = () => {
+    dispatch({ type: 'UI - StartDragging' });
+  };
+
+  const endDragging = () => {
+    dispatch({ type: 'UI - EndDragging' });
+  };
+
+Luego pintaremos en base a la propiedad isDragging el CSS asi:
+  <List sx={{ opacity: isDragging ? 0.2 : 1, transition: 'all 0.3s' }}>
+Fijate que aún me falta cambiar el estado de la Card según a dónde la arrastre.
+
+			VIDEO 116 CAMBIAR EL ESTADO DE LA ENTRY
+
+Fijate que ya tengo programado tener acceso al id de la card arrastada.Sólo me quedaría filtrar el EntryList y cambiar el status de la card con ese id.
+
+Fijate que si bien podria cambiar todo,mejor cerrar el update a sólo dos props.
+
+    case '[Entries] - Update-Entry':
+      return {
+        ...state,
+        entries: state.entries.map((entry) => {
+          /* de esta forma sólo se cambian estas dos props si el id coincide. */
+          if (entry._id === action.payload._id) {
+            entry.status = action.payload.status;
+            entry.description = action.payload.description;
+          }
+          return entry;
+        }),
+
+Ya solo falta llamar en el onDropOver a esta acción:
+  const onDropEntry = (event: DragEvent<HTMLDivElement>) => {
+    const id = event.dataTransfer.getData('ID');
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const entry = entries.find((entry) => entry._id === id)!;
+    entry.status = status;
+    updateEntry(entry);
+    endDragging(); // importantisimo llamar al endDragging que pone isDragging a  false
+  };
+
+/* recuerda que find devuelve undefined si no encuentra el elemento.Fijate que en nuestra app la Card tendrá un id seguro,asi que debo usar el not-null assertion operator y corregir el linter */
+
+					VIDEO 117 CIERRE DE LA SESIÓN
+
+Fijate que esta app se presta a realizar muchas funcionalidades extra.De momento vamos a empezar a añadirla una DB para hacer persistente la data.
+Usaremos Docker para ello,para así mejorar con esta tecnología.
+
+También veremos qué es lo que dejamos estático y qué dinámico, aunque primero vamos a ir con la DB y la API de Next que trae embebida.
+Fijate también que los barrel file son muy útiles.
+Fernando también recalca que apenas estamos usando paquetes de terceros,incluso removeremos uuid ya que sólo ha sido temporal.
+
+			SECCION 09 OPENJIRA - API con NEXT + DB
+
+Next no sólo ofrece routing basado en el filesystem sino que también tiene una RESTFULL API disponible.Crearemos una DB con Mongo.
+Usaremos peticiones bajo demanda y veremos la diferencia entre llamar a nuestro propio endpoint de la REST o no.Este concepto es importante.Lo haremos con getServerSideProps,ya que no tiene sentido llamar al endpoint.
+
+En esta sección creamos una base de datos de MongoDB usando Docker, crearemos una semilla para llenar dicha base de datos de forma instantánea, pero puntualmente veremos:
+
+1- MongoDB
+2- Docker-compose
+3- Volumenes de docker
+4- Semillas de base de datos
+5- Validaciones
+6- Next.js Middlewares (Nuevo desde Next.js 12.0.0)
+7- Crear en base de datos
+8- Actualizar en base de datos
+9- Leer desde base de datos
+10- Mantener persistente nuestra data
+11- Y más
+
+Es una sección muy importante porque es la primera vez que empezamos a trabajar fuertemente con el Restful API que ya nos ofrece Next.justifyContent
+
+			VIDEO 122  DOCKER-COMPOSE - CREANDO LA IMAGEN
 
 
