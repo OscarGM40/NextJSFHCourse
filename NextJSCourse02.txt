@@ -601,4 +601,127 @@ Es una sección muy importante porque es la primera vez que empezamos a trabajar
 
 			VIDEO 122  DOCKER-COMPOSE - CREANDO LA IMAGEN
 
+Por ahora vamos a usar docker, aunque parece que usaremos MongoAtlas en el deployIMPORTANTE: fijate que voy a crear un volumen en la propia app,y que no quiero subirlo a Github,luego en el .gitignore ignoro ese volumen:
+  services:
+    entriesdb:
+      image: mongo:5.0.0
+      container_name: entriesdb
+      ports:
+        - "27017:27017"
+      volumes:
+        - ./mongo:/data/db # si no existe el directorio lo crea
+
+En el .gitignore:
+mongo/
+
+					VIDEO 123 RESTFULL API EN NEXTJS
+
+Bien,con la DB levantada,ahora lo que necesitamos es un backend.
+NOTA: no porque Next me ofrezca la posibilidad de desarrollar un backend tengo que usar el backend de Next.Perfectamente puedo usar Next sólo para el frontend
+
+El único detalle que debo tener en cuenta es que debo filtrar la petición por el method:
+import type { NextApiRequest, NextApiResponse } from 'next';
+
+type Data = {
+  ok: boolean;
+  name: string;
+  method: string;
+};
+
+export default function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) {
+  res.status(200).json({
+    ok: true,
+    name: 'John Doe',
+    method: req.method || 'no method detected',
+  });
+}
+Debo tener en cuenta que el status 200 sería para un GET,un 201 para un POST,etc,debo tener en cuenta los status code que envio también.Nada nuevo.
+
+		VIDEO 124 CONECTARNOS A MONGODB CON MONGOOSE
+
+NOTA: tengo un snippet llamado nextapi que me crear un controller+ruta por si borro el pages/api/hello.ts.Es buena idea esto
+Bien,para trabajar con Mongo lo mejor que puedo hacer es usar el ODM mongoose,ya que es muy cómoda su sintaxis.
+>yarn add mongoose
+Dado que necesito el siguiente video para llamar a la URI mejor pongo el código en el siguiente.
+
+				VIDEO 125 VARIABLES DE ENTORNO
+
+Creo en la raiz del proyecto el .env.Fijate que inmediatamente despues debería ir al .gitignore e ignorar este archivo.
+
+IMPORTANTE: Next trabaja de forma muy diferente a cra con las variables de entorno,ya que unas serán para el servidor(como este caso) y otras para el browser.No tiene sentido ninguno que el browser pueda ver la variable con la cadena de conexión.
+Para solucionar esto y ver una variable en el browser tengo que usar 'NEXT_PUBLIC' delante de la variable.Por defecto cualquier variable sólo va tener ámbito de backend,por motivos de seguridad.Desde luego pensaron en todo.
+Sabiendo todo esto,ya sí, vamos a crear la env,pero en el siguiente video.
+
+		VIDEO 126 CONECTANDONOS A LA DB DEL CONTENEDOR DESDE LA API
+
+TIP: es buena idea crear un .env.template con solo las keys de las variables de entorno.Obviamente podria usar un markdown para lo mismo.Pero fijate que es buena idea ya que el desarrollador puede copiar y pegar:
+En el .env.template...
+MONGO_URL= <- no la relleno,pero asi el dev sabe que env lleva el proyecto
+
+Bien,tengo claro como dar un ámbito a una variable de entorno en Next,y que debo dejar claro que variables usa mi aplicación con un .env.template + un markdown.
+Fernando lo que va a hacer es abrir una conexión y cerrarla y aprovechar si hubiera alguna(muy pro):
+/** Estados de la conexion en mongoose
+ * 0 = disconnected
+ * 1 = connected
+ * 2 = connecting
+ * 3 = disconnecting
+ */
+const mongoConnection = {
+  isConnected: 0,
+};
+
+export const connect = async () => {
+  if (mongoConnection.isConnected) {
+    return console.log('Ya estas conectado');
+  }
+  if (mongoose.connections.length > 0) {
+    mongoConnection.isConnected = mongoose.connections[0].readyState;
+    if (mongoConnection.isConnected === 1) {
+      return console.log('Usando conexión anterior');
+    }
+    await mongoose.disconnect();
+  }
+
+  try {
+    await mongoose.connect(process.env.MONGO_URL || '');
+    mongoConnection.isConnected = 1;
+    console.log('Conectado a mongoDB:', mongoose.connection.name);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const disconnect = async () => {
+  if(mongoConnection.isConnected !== 0) return;
+  await mongoose.disconnect();
+  console.log('Desconectado de MongoDB');
+};
+
+En cuanto al controlador fijate varias cosas:
+type Data = {
+  message: string;
+};
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(401).json({
+      message: 'No tiene acceso a este servicio',
+    });
+  }
+  await db.connect();
+  await db.disconnect();
+  res.status(200).json({ message: 'Proceso realizado correctamente!' });
+
+Lo primero le puedo dar el Type de la response con NextApiResponse<T>.Lo segundo,no queremos acceder a este endpoint si estamos en producción,pues usaremos MongoAtlas.
+Por último fijate que abrimos y cerramos la conexión,si,pero en ese espacio es donde haremos todo(fijate que profesional el acceso que hizo).
+En la proxima clase vamos a crear un modelo que nos dirá como luce cada una de las entidades que tenga mi app.
+
+			VIDEO 127 CREANDO UN ESQUEMA DE MONGOOSE
+
 

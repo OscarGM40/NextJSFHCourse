@@ -1,0 +1,17 @@
+version: "3"
+
+services:
+    mongodb:
+      image: mongo:5.0.0
+      container_name: openjira-db
+      ports:
+        - '27021:27017'
+      environment:
+        - MONGO_INITDB_DATABASE=openjira
+        - MONGO_INITDB_ROOT_USERNAME=root
+        - MONGO_INITDB_ROOT_PASSWORD=root
+      volumes:
+        - ./mongo-entrypoint:/docker-entrypoint-initdb.d
+        - ./mongoconfig:/var/lib/data/configdb
+        - ./mongodb:/var/lib/data/db
+ 
