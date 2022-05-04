@@ -1,185 +1,727 @@
-				SECCION 05 POKEMON STATIC - CONTINUACIÓN APP POKEMONS
+			SECCION 07 OPENJIRA EJERCICIO CON MATERIAL UI
 
-En esta sección nos vamos a preocupar en hidratar la aplicación.React es capaz de modificar ese contenido estático perfectamente.Fijate que esta feature es increiblemente poderosa.
-Recuerda,el hecho de que el contenido sea generado de manera estática no significa que no puedo modificarlo despues(incluso usaré useReducer).
+Vamos a empezar una nueva aplicación la cual simulará el dashboard de Jira.Crearemos la funcionalidad de crear tareas,borrarlas,editarlas,etc...
+Sin embargo lo importante es que lo haré con la función getServerSideProps,la cual Next va a ejecutar bajo demanda.Esto es muy poderoso,ya que pre-fetchea la data,mejorando la UserExperience.
+Usaremos la API interna de Next,en vez de una externa.
+Estilizaremos con Material UI
 
-En esta sección trabajaremos con la hidratación de nuestro contenido estático con código de React. También aprenderemos a utilizar librerías de terceros aunque estas no fueran escritas en TypeScript.
+Esta sección principalmente se enfoca en la creación del estado global de la interfaz de usuario y la creación de snippets que nos permitan crear todo el cascarón rápidamente.
 
-Adicionalmente hay varias tareas que nos ayudarán a reforzar todo lo aprendido hasta el momento.
+Puntualmente veremos:
+1- Manejo del contexto
+2- Material UI
+3- Temas de Material UI
+4- Creación de snippets
+Entre otras cosas importantes.
+	
+			VIDEO 88-89 INICIO PROYECTO - INSTALACIÓN MATERIAL UI 
 
-					VIDEO 62 GUARDAR EN LOCALSTORAGE
+Iniciamos un nuevo proyecto con yarn create next-app --typescript.
+NOTA: MUI usa emotion como styling engine por defecto.Si quisiera podría usar styled-components(requerirá de otras dependencias a instalar).En este proyecto seguiremos con emotion como motor de estilos:
+npm install @mui/material @emotion/react @emotion/styled <- recuerda usar yarn add si voy con yarn.
 
-Si intento acceder al localStorage de esta forma voy a ver este error:
+También pide la fuente y los iconos,ambos puedo usar la CDN.En el caso de los iconos tiene sus pros y contras,ya que la CDN trae todo.Si los instalo asi:
+yarn add @mui/icons-material 
+favoreceré el tree shaking ya que sólo los iconos que use formarán parte del bundle final de la app(a saber si es cierto).
 
-const PokemonPage: NextPage<Props> = ({ pokemon }) => {
+IMPORTANTE: fijate que vamos a crear el file _document.tsx y con un snippet rellenarlo.Asi tendremos más control sobre el document.
+De paso le agrego la CDN para la fuente en el Head de Next de ese file.
 
-  const onToggleFavorite = () => {
-    localStorage.setItem('favorites',`${pokemon.id}`);
+IMPORTANTE: desde ya vamos a aprovecharnos de esta libreria y settear un custom theme con la paleta del mode dark.Fijate que requiere de un CssReset:
+
+const basicTheme = createTheme({
+  palette: {
+    mode: 'dark',
   }
-  localStorage.getItem('favorites') <- aqui voy a ver que es el backend el que intenta acceder al localStorage y obviamente sólo existe en el frontend.
+})
 
-Server Error
-ReferenceError: localStorage is not defined 
+function MyApp({ Component, pageProps }: AppProps) {
+  return (
+    <ThemeProvider theme={basicTheme}>
+      <CssBaseline /> <- debo resetear los estilos para usar createTheme
+      <Component {...pageProps} />
+    </ThemeProvider>
+  );
 
-Si bien hay librerias para poder acceder al localStorage desde el backend 
-Este error sucede porque en esa instrucción estoy en node y no sobre el objeto window:
-console.log(typeof window); <- si hago esto veré que da undefined en la consola del servidor pero que devuelve un objeto en la consola del browser.
-Con todo esto en mente vamos a resolver la tarea pues
+Perfecto,no puede ser más sencillo cambiar el tema.
 
-			VIDEO 63 GUARDAR EN EL LOCALSTORAGE EL ARREGLO DE FAVORITOS
+			VIDEO 90 CREANDO TEMAS EN MATERIAL UI
 
-Dado que hay que usar un arreglo y es una función auxiliar lo mejores crearla como una utilidad:
+Realmente debo siempre pensar en reusabilidad y mantenibilidad.La forma anterior de meter un tema en duro en un archivo no es la correcta.Asi que creo el folder themes y el index.ts para trabajar con el patrón barrel:
 
-const toggleFavorite = (id: number) => {
+Creo dos files con el mode light y dark y los exporto a través del barrel file
+export const lightTheme = createTheme({
+  palette: {
+    mode: 'light',
+    background:{
+      default: grey[300],
+    }
+  }
+})
 
-  const favorites: number[] = JSON.parse(localStorage.getItem('favorites') || '[]');
+Fijate como puedo crear los temas que quiera y cambiarlos en runtime,etc.
+De echo vamos a settear algunos colores al gusto:
+    primary: {
+      main: '#4a148c',
+    },
+    secondary: {
+      main: '#19857b',
+    },
+    error: {
+      main: red.A400, <- 400 es el grado de intensidad
+    }
+  }
+					VIDEO 91 CREAR LAYOUT Y NAVBAR
+
+Si bien sólo vamos a tener un layout voy a crear el folder layouts por si tuviera más despues.
+Creo el archivo components/layouts/Layout.tsx y devuelvo un Box.
+
+TIP: la prop sx es como el atributo style en html o css en otras librerias.Me permite añadir un estilo en linea,pero además tiene acceso al theme de MUI actual.
+Me permite pasar cualquier css(en casi cualquier componente).TIP: puede que venga de extended style(o no).
+
+Fijate como puedo pasar un objeto con cualquier prop o sobrescribir un estilo de cualquier componente de la libreria:
+export const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    secondary: {
+      main: '#19857b',
+    },
+    error: {
+      main: red.A400,
+    },
+  },
+  components:{
+    MuiAppBar:{
+      defaultProps:{},
+      styleOverrides:{
+        root: {
+          backgroundColor: '#4a148c',
+        }
+      }
+    }
+  }
+})
+TIP: un Button será un MuiButton,una AppBar será una MuiAppBar,...
+NOTA: fijate que por ejemplo podría pasar la elevation en 0 o en 2 a todo el tema.Fijate que es una prop,no es css luego va en defaultProps:
+  components:{
+    MuiAppBar:{
+      defaultProps:{
+        elevation: 0,
+      },
+
+						VIDEO 93 CREANDO EL SIDEBAR
+
+En MUI el típico Sidebar se conoce como Drawer.Puedo ver en la doc de la libreria que hay muchos,y muy útiles,como el típico que se recoge a iconos para dashboards.
+ <Drawer anchor="left" open={true} onClose={() => console.log("cerrando")}>
+      {/* un box es como un div,nada más */}
+      <Box sx={{ width: "250px", }} >
+        
+        <Box sx={{ padding: "5px 10px" }}>
+          <Typography variant="h4">Menú</Typography>
+        </Box>
+
+        <List>
+          {menuItems.map((text, index) => (
+            <ListItem button key={text}>
+              <ListItemIcon>
+                {index % 2 === 0 ? <InboxOutlined /> : <MailOutlined />}
+              </ListItemIcon>
+              <ListItemText primary={text} />
+            </ListItem>
+          ))}
+        </List>
+
+        <Divider />
+
+Fijate que Navbar y Sidebar están a la misma altura.Usaremos la Context API para almacenar estados globales desde ahora.
+
+						VIDEO 94 UI CONTEXT
+
+En toda aplicación que tenga cierto nivel de complejidad tengo que comunicar información entre componentes y que puedan reaccionar cuando una variable o propiedad cambia.
+Fijate que dejo un Snippet creado para crear un Context en TS.Entré con CTRL+SHIFT+p y 'userSnippets'.Despues seleccioné los globales:
+	 "Create a Context in ReactTS": {
+	 	"scope": "javascriptreact,typescriptreact",
+	 	"prefix": "reactcontext-create",
+	 	"body": [
+      "import { createContext } from 'react';",
+      "",
+      "interface ${1:XXX}Props {",
+      "  ${2:exampleProp}: ${3:boolean};",
+      "}",
+      "",
+      "export const ${1:XXX}Context = createContext({} as ${1:XXX}Props);",
+	 	],
+	 	"description": "Creates a context in TS-React"
+	 }
+}
+El scope muy importante.
+
+				VIDEO 95 CREANDO EL CONTEXT PROVIDER
+
+Turno de crear el Provider que consuma el Context y proveerlo a la app.También crearé un snippet para futuros casos.Fijate que es mejor idea de lo que parece.
+
+				VIDEO 96 CREANDO EL REDUCER Y SU SNIPPET
+
+El reducer es una función pura que recibe el state actual y una accion y produce el siguiente estado.
+import { UIState } from "./UIProvider";
+
+type UIAction = 
+| { type: 'UI - Open Sidebar'}
+| { type: 'UI - Close Sidebar'}
+
+export const uiReducer = (state: UIState,action: UIAction):UIState => {
+  switch (action.type) {
+    case 'UI - Open Sidebar':
+      return {
+        ...state,
+        sidemenuOpen:true
+      }
+    case 'UI - Close Sidebar':
+      return {
+        ...state,
+        sidemenuOpen:false
+      }
+    default:
+      return state;
+  }
+}
+Adicionalmente,creo el snipet para un reducer.
+
+				VIDEO 99 USANDO EL CONTEXT UI
+
+Fijate que también es buena idea crear funciones en el componente Provider:
+
+export const UIProvider: FC<UIProviderProps> = ({ children }) => {
+  const [state, dispatch] = useReducer( uiReducer, UI_INITIAL_STATE);
+
+  const openSideMenu = () => {
+    dispatch({ type: 'UI - Open Sidebar' });
+  }
+
+  const closeSideMenu = () => {
+    dispatch({ type: 'UI - Close Sidebar' });
+  }
+
+  return (
+    <UIContext.Provider
+      value={{
+        // sidemenuOpen: state.sidemenuOpen,
+        ...state, //mejor usar el spread operator
+        openSideMenu,
+        closeSideMenu,
+      }}
+    >
+Diría que incluso necesario.Si está la posibilidad usala.
+NOTA:fijate que esto implica cambiar el primer state inicial al crear el context
+
+
+interface UIProps {
+  sidemenuOpen: boolean;
+  /* methods */
+  openSideMenu: () => void;
+  closeSideMenu: () => void;
+}
+Con todo esto puedo poner en el drawer que empiece en false y en el onClose se cierre:
+
+const Sidebar = () => {
+  const { sidemenuOpen,closeSideMenu } = useContext(UIContext);
+  return (
+    <Drawer anchor="left" open={sidemenuOpen} onClose={closeSideMenu}>
+
+Y en la Navbar le paso el open al onClick sobre el icono:
+const Navbar = () => {
+  const { openSideMenu } = useContext(UIContext);
+
+  return (
+    <AppBar position="sticky">
+      <Toolbar>
+        <IconButton size="large" edge="start" onClick={openSideMenu}>
+
+			SECCION 08 OPENJIRA APP -MANEJO DE ENTRADAS
+
+En esta sección vamos a hacer de manera local todo el manejo de entradas al dashbard.Trabajaremos con más elementos de Material UI y también crearemos nuestra propia implementación de un Drag and Drop (sin librerías de terceros)
+
+El objetivo principal es tener el control de las entradas y poder jugar con ellas a nuestra voluntad.
+
+				VIDEO 105 DISEÑO DE LA PANTALLA PRINCIPAL
+
+Recuerda que Next tiene una estructura para las pages muy concreta,asi que tendré en pages/index.ts lo que se vea en /,es decir en la pantalla principal.
+Fijate que no es mismo el breakpoint xs que la propiedad sx para agregar CSS en MUI.En cuanto a la UI tres columnas desde sm y 1 en xs.Todo bastante sencillo:
+
+const Home: NextPage = () => {
+  return (
+    <Layout title="Home - OpenJira">
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={4}>
+          <Card sx={{ height: "calc(100vh - 100px)", }} >
+            {/* cardheader es self-closed */}
+            <CardHeader title="Pendientes" />
+            <CardContent>
+              {/* agregar una nueva entrada */}
+              {/* listado de las entradas */}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={4}>
+          <Card sx={{ height: "calc(100vh - 100px)", }} >
+            <CardHeader title="En Progreso" />
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={4}>
+          <Card sx={{ height: "calc(100vh - 100px)", }} >
+            <CardHeader title="Completadas" />
+          </Card>
+        </Grid>
+      </Grid>
+    </Layout>
+  );
+
+NOTA: desde la v5 ya no es npm install @material/core sino @mui/material.Es decir que estoy trabajando con material UI pero la version 5.
+La web es https://mui.com/
+
+			VIDEO 106 ENTRIES CONTEXT - CONTEXTO PARA LAS ENTRADAS
+
+Recuerda que estamos simulando Jira,una entrada será una tarea más bien.Bien,lo primero es instalar uuid para generar identificadores únicos(parece que lo haremos más adelante).
+En cuanto al Contexto creamos todo lo relacionado para un EntriesContext.De momento poco más,hay que ver como luce una entrada antes de nada
+Fijate que rápido fue con los snippets,y encima los mejoramos.
+
+			VIDEO 107 INTERFACE ENTRY
+
+Creamos la interface para el tipado:
+export interface Entry {
+  _id: string;
+  description: string;
+  createdAt: number;
+  status: EntryStatus; 
+}
+
+export type EntryStatus = 'pending' | 'in-progress' | 'finished';
+
+Y también creo tres entradas hardcodeadas para empezar como estado inicial:
+
+const Entries_INITIAL_STATE: EntriesState = {
+  entries: [
+    {
+      _id: uuidv4(),
+      description:
+        'lNisi sint do eiusmod enim commodo eu laborum ea reprehenderit do.',
+      status: 'pending',
+      createdAt: Date.now(),
+    }, ...
+
+		VIDEO 108 ENTRYLIST Y ENTRYCARD - COMPONENTES PARA MOSTRAR ENTRADAS
+
+Comencemos creando un componente para listar las entradas segun tipo:
+const EntryList = () => {
+  return (
+    /* usaré un div en vez de un Box para ver al onDrag */
+    <div>
+      <Paper
+        sx={{
+          height: 'calc(100vh - 200px)',
+          overflow: 'auto',
+          backgroundColor: 'transparent',
+          padding: '1px 6px',
+        }}
+      >
+        {/* TODO: cambiar estilo si esta en onDrag */}
+        <List sx={{ opacity: 1 }}>
+          <EntryCard />
+        </List>
+      </Paper>
+    </div>
+  );
+};
+export default EntryList;
+
+Y el EntryCard también es bastante sencillo aún:
+const EntryCard = () => {
+  return (
+    <Card sx={{ marginBottom: 1 }}>
+      <CardActionArea>
+        <CardContent>
+          <Typography sx={{ whiteSpace: 'pre-line' }}>
+            Esto es la descripcion del
+          </Typography>
+        </CardContent>
+        <CardActions sx={{display:'flex',justifyContent: 'flex-end',paddingRight:2}}>
+          <Typography variant='body2'>hace 30 minutos</Typography>
+        </CardActions>
+      </CardActionArea>
+    </Card>
+  );
+};
+export default EntryCard;
+
+			VIDEO 109 MOSTRAR TARJETAS BASADO EN EL ESTADO DE LA ENTRADA
+
+Segun qué columna sea vamos a filtrar por su estado.Dado que estoy en TS lo primero será mandarlo:
+<Grid item xs={12} sm={4}>
+    <Card sx={{ height: 'calc(100vh - 100px)' }}>
+      <CardHeader title="En Progreso" />
+    <CardContent>
+      <EntryList status="in-progress" />
+    </CardContent>
+    </Card>
+</Grid>
+
+IMPORTANTE: fijate que si quiero ser mejor en React debo empezar a memorizar procesos pero ya.Recuerda diferenciar entre useMemo,que memoriza el retorno de una función y useCallback que memoriza sólo la función,luego faltará ejecutarla.Por lo demás son iguales:
+
+const EntryList: FC<Props> = ({ status }) => {
+  const { entries } = useContext(EntriesContext);
+
+  /*  a menos que los entries cambien por qué no memorizar este proceso? realmente es mejor que me devuelva el memorizado,no? */
+  const entriesByStatus = useMemo(
+    () => entries.filter((entry) => entry.status === status),
+    [entries]
+  );
+* Dado que estoy usando useMemo se me devolverá la memorización de la ejecución de ese filtrado.
+Desde ya debo acoplar esto a mi kit,sobre todo lo más básico.
+
+			VIDEO 110 AGREGAR ENTRADAS
+
+Para agregar una nueva entrada vamos a crear un nuevo componente.Fijate de nuevo  que bonito luce esta libreria,parece que incluso haya mejorado su UI en la v5.
+
+const NewEntry = () => {
+  return (
+    <Box sx={{ marginBottom: 2, paddingX: 1 }}>
+      <Button startIcon={<AddCircleOutlined />} fullWidth variant="outlined">
+        Agregar tarea
+      </Button>
+      <TextField
+        fullWidth
+        sx={{ marginTop: 2, marginBottom: 2 }}
+        autoFocus
+        multiline
+        placeholder="Agregar una nueva entrada"
+        label="Descripción"
+        helperText="Escribe aquí la descripción de la entrada"
+      />
+      <Box display="flex" justifyContent="space-between">
+        <Button variant="outlined">Cancelar</Button>
+        <Button variant="outlined" color="secondary" endIcon={<SaveOutlined />}>
+          Guardar
+        </Button>
+      </Box>
+    </Box>
+
+		VIDEO 111 TRABAJANDO SOBRE NUESTRO FORMULARIO
+
+Dado que el formulario es muy puntual vamos a manejarlo con un useState.Fijate que esta libreria me aporta la propiedad error en los TextField y similares para el manejo de error.Pondrá el control con bordes rojos si esa propiedad computa a true:
+TIP: fijate que Fernando ha mejorado mucho,y ofrece soluciones top como crear el useState para el touched.De esta forma puedo hacer esto:
+
+error={inputValue.length <= 0 && touched} <- primero tendrán que tocarlo.
+
+Y no sólo esto,sino que ya puedo condicionar el helperText con un ternario.
+IMPORTANTE: aún queda la guinda del pastel,ya que también quiero el onBlur y poner el campo a touched.Lo dejó perfecto FH.
+
+		VIDEO 112 INSERTAR ENTRADA EN EL ESTADO GLOBAL
+
+Empezaré por el reducer.Fijate que yo sólo tengo un string desde el input,pero una Entry tiene un status,un createdAt y un _id único:
+
+type EntriesAction = { type: '[Entries] - Add-Entry'; payload: Entry };
+
+Ojo,el reducer no debe llevar lógica alguna, asi que la función la pongo en el provider :
+
+  const addNewEntry = (description: string) => {
+    const newEntry: Entry = {
+      _id: uuidv4(),
+      description,
+      status: 'pending',
+      createdAt: Date.now(),
+    };
+    dispatch({
+      type: '[Entries] - Add-Entry',
+      payload: newEntry,
+    });
+  };
+
+Ya sólo falta llamar a este método en cualquier lugar de la app.
+  const onSave = () => {
+    if (inputValue.length === 0) return;
+    addNewEntry(inputValue);
+    setInputValue('');
+    setTouched(false);
+    setIsAdding(false);
+  };
+
+				VIDEO 113 TAREA - IS ADDING 
+
+La tarea consiste en cambiar un useState por un estado global:
+
+ type: 'UI - setIsAddingEntry'; payload: boolean };
   
-  const isFavorited = favorites.includes(id);
+ case 'UI - setIsAddingEntry':
+      return {
+        ...state,
+        isAddingEntry: action.payload,
+      };
 
-  if (isFavorited) {
-    const newFavorites = favorites.filter(pokeId => pokeId !== id);
-    localStorage.setItem('favorites', JSON.stringify(newFavorites));
-  } else {
-    localStorage.setItem('favorites', JSON.stringify([...favorites, id]));
-  }
-}
+Fijate que al estar en TS tendré que ir resolviendo los types.Perfecto.
+Ya solo falta cambiar el state por el context correspondiente.
+const { isAddingEntry, setIsAddingEntry } = useContext(UIContext);
 
-export default {
-  toggleFavorite
-}
+				VIDEO 114 DRAG AND DROG - FORMA MANUAL
 
-				VIDEO 64 LEER Y VERIFICAR SI EXISTE EN FAVORITOS
+NOTA: uno de los paquetes más usados para hacer dnd en React es 'react-beautiful-dnd'.Fernando deja el link en los recursos y desde él se puede acceder a un video-tutorial en egghead muy bueno.Puedo observar que es muy poderoso.
+Sin embargo lo vamos a hacer manualmente,con el evento onDrag y sus relacionados.
+Obviamente va sobre una Card,y ya tenemos el componente EntryCard para cada Card.
 
-Ahora queremos cambiar el texto del boton de Favoritos(guardar/sacar de favoritos)
-Fijate que se nos presenta el mismo problema al estar en Next,ya que el componente tiene ámbito tanto en el servidor como en el browser(es porqué es una página?? o esto es para todo componente de React en Next??).
-Una simple validación filtrará esto:
+IMPORTANTE: la libreria mui me permite usar la propiedad boleana draggable sobre muchos elementos.Card es uno de ellos(debe soportarlo el browser donde se esté ejecutando mi app):
+<Card sx={{ marginBottom: 1, backgroundColor: color }} draggable>
 
-const existsInFavorites = (id: number): boolean => {
-  if(typeof window === 'undefined') return false;
-  const favorites: number[] = JSON.parse(localStorage.getItem('favorites') || '[]');
-  return favorites.includes(id);
-}
-Fijate que tendré que usar mucho typeof window al usar frameworks híbridos.
+NOTA: fijate que onDrag va a ir acompañado del evento onDrop,y será el componente EntryList el que reciba ese evento.De echo,dejamos el componente en un <div> ya que ni <Paper> ni <Box> tienen visión sobre ese evento onDrop.Y recibiré el id de la card arrastrada gracias al event.dataTransfer.setData('text',entry._id).
 
-						VIDEO 65 PANTALLA DE FAVORITOS
+TIP: recuerda que puedo consultar el tipado de cada evento y que si me dice que es de tipo DragEventHandler se refiere a la función y es sólo DragEvent<Element
 
-Primeramente vamos a cargar en un efecto el array de ids:
+Resumen: en el elemento a arrastrar establezco los evento dragStart y dragEnd y el boleano draggable, y en la zona donde se puede dejar esos elementos establezco el onDrop y el onDragOver:
 
-const Favorites: NextPage<Props> = () => {
-  const [favoritePokemons, setFavoritePokemons] = useState<number[]>([]);
+PASO UNO: 
+* En la Card a arrastrar le paso el id al empezar el drag 
+const onDragStart = (event: DragEvent<HTMLDivElement>) => {
+    event.dataTransfer.setData('ID', entry._id);
+};
+* Ya veré que necesito hacer al terminar el drag(ordenar,limpiar,etc...)
+  const onDragEnd = (e: DragEvent<HTMLDivElement>) => { };
 
-  useEffect(() =>{
-    setFavoritePokemons(localFavorites.pokemons);
-  },[])
-
-TIP: fijate que puedo ir a las devTools y buscar por el nombre del componente,ya que es una locura buscar en el árbol.Fijate que puedo ver su useState con su carga(en este caso veré el arreglo de ids) y el useEffect,...Muy interesante.
-
-			VIDEO 66 CONSTRUIR EL LISTADO DE POKEMONS FAVORITOS
-
-Simplemente seguir las instrucciones.Fijate que cuando se haga el build no veré el efecto de esta navegación:
- const router = useRouter();
-
-  const onFavoriteClicked = () => {
-    router.push(`/pokemon/${pokemonId}`);
+  return (
+    <Card
+      sx={{ marginBottom: 1, backgroundColor: color }}
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+    >
+PASO DOS:
+const onDropEntry = (event: DragEvent<HTMLDivElement>) => {
+   const id = event.dataTransfer.getData('ID');
+ }
+Fijate que setDate(key,value) puedo pasarle cualquier string como key,luego lo recupero con getData
+  /* ojo,un div que reciba el drop necesita activar en el onDragOver esta caracteristica,se hace llamando al preventDefault  */
+  const allowDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
   };
 
   return (
-    <Grid xs={6} sm={3} md={2} xl={1} key={pokemonId}>
-      <Card
-        hoverable
-        clickable
-        css={{ padding: "10px" }}
-        onClick={onFavoriteClicked}
-      >
-Ya que en el npm run dev estoy en el backend,pero esto será servido con SSG.Comprobarlo.
+    /* usaré un div para tener visión sobre el evento nativo onDrop,y recibir el id de la card arrastrada,ya que ni Box ni Paper tienen ese evento programado en mui */
+    <div onDrop={onDropEntry} onDragOver={allowDrop}>
 
-				VIDEO 68 LIBRERIA EXTERNA CANVAS-CONFETTI
+De momento lo dejaré aqui.Fijate que es realmente sencillo programar un onDrag y parecia mucho más difícil,como siempre
 
-NOTA: puedo hacer un hard refresh con CTRL+SHIFT+r.
-Esta libreria CanvasConfetti puede ser un tanto llamativa pero la vamos a usar:
->npm i canvas-confetti 
-> npm i @types/canvas-confetti -D
-Para usarla simplemente hay que configurar el método confetti:
+		VIDEO 115 CAMBIAR ASPECTO VISUAL DE LA CARD SOBRE LA QUE HAGO EL DRAG 
 
-  if(!isInFavorites){
-    confetti({
-    zIndex:999,
-    particleCount:100,
-    spread: 160,
-    angle: -100,
-    origin:{
-      x:0.9,
-      y:0.1
-    }
-    })
-  }
-
-				TAREA 69 POKEMON BY NOMBRE
-
-Seguir las instrucciones.Recuerda que debo especificar todos los paths posibles.
-IMPORTANTE: realmente la API nos devuelve demasiada data.Sería mejor solo coger la necesaria antes de cachearla.
-
-				VIDEO 72 CENTRALIZAR LA DATA 
-
-Dado que las dos peticiones son similares puedo resumir un poco todo:
-
-export const getPokemonInfo = async (nameOrId: string) => {
-  const { data } = await pokeApi.get<PokemonResponse>(`pokemon/${nameOrId}`)
-
-  return {
-    name: data.name,
-    id: data.id,
-    sprites: data.sprites
-  }
-Ahora las dos llamadas a getStaticProps serán mucho más simple:
-export const getStaticProps: GetStaticProps = async (ctx) => {
-  const { name } = ctx.params as { name: string };
-
-  return {
-    props: {
-      pokemon: await getPokemonInfo(name),
-    },
+Fijate que es bastante sencillo.Habrá que establecer en el contexto global la propiedad isDragging y establecer un estilo css para el que tenga ese isDragging a true.Hagamoslo:
+En el reducer creamos dos action creators:
+  | { type: 'UI - StartDragging' }
+  | { type: 'UI - EndDragging' };
+Con su lógica:
+    case 'UI - StartDragging':
+      return {
+        ...state,
+        isDragging: true,
+      };
+    case 'UI - EndDragging':
+      return {
+        ...state,
+        isDragging: false,
+      };
+Las disparo y abastezco esa función disparadora en el provider:
+  const startDragging = () => {
+    dispatch({ type: 'UI - StartDragging' });
   };
+
+  const endDragging = () => {
+    dispatch({ type: 'UI - EndDragging' });
+  };
+
+Luego pintaremos en base a la propiedad isDragging el CSS asi:
+  <List sx={{ opacity: isDragging ? 0.2 : 1, transition: 'all 0.3s' }}>
+Fijate que aún me falta cambiar el estado de la Card según a dónde la arrastre.
+
+			VIDEO 116 CAMBIAR EL ESTADO DE LA ENTRY
+
+Fijate que ya tengo programado tener acceso al id de la card arrastada.Sólo me quedaría filtrar el EntryList y cambiar el status de la card con ese id.
+
+Fijate que si bien podria cambiar todo,mejor cerrar el update a sólo dos props.
+
+    case '[Entries] - Update-Entry':
+      return {
+        ...state,
+        entries: state.entries.map((entry) => {
+          /* de esta forma sólo se cambian estas dos props si el id coincide. */
+          if (entry._id === action.payload._id) {
+            entry.status = action.payload.status;
+            entry.description = action.payload.description;
+          }
+          return entry;
+        }),
+
+Ya solo falta llamar en el onDropOver a esta acción:
+  const onDropEntry = (event: DragEvent<HTMLDivElement>) => {
+    const id = event.dataTransfer.getData('ID');
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const entry = entries.find((entry) => entry._id === id)!;
+    entry.status = status;
+    updateEntry(entry);
+    endDragging(); // importantisimo llamar al endDragging que pone isDragging a  false
+  };
+
+/* recuerda que find devuelve undefined si no encuentra el elemento.Fijate que en nuestra app la Card tendrá un id seguro,asi que debo usar el not-null assertion operator y corregir el linter */
+
+					VIDEO 117 CIERRE DE LA SESIÓN
+
+Fijate que esta app se presta a realizar muchas funcionalidades extra.De momento vamos a empezar a añadirla una DB para hacer persistente la data.
+Usaremos Docker para ello,para así mejorar con esta tecnología.
+
+También veremos qué es lo que dejamos estático y qué dinámico, aunque primero vamos a ir con la DB y la API de Next que trae embebida.
+Fijate también que los barrel file son muy útiles.
+Fernando también recalca que apenas estamos usando paquetes de terceros,incluso removeremos uuid ya que sólo ha sido temporal.
+
+			SECCION 09 OPENJIRA - API con NEXT + DB
+
+Next no sólo ofrece routing basado en el filesystem sino que también tiene una RESTFULL API disponible.Crearemos una DB con Mongo.
+Usaremos peticiones bajo demanda y veremos la diferencia entre llamar a nuestro propio endpoint de la REST o no.Este concepto es importante.Lo haremos con getServerSideProps,ya que no tiene sentido llamar al endpoint.
+
+En esta sección creamos una base de datos de MongoDB usando Docker, crearemos una semilla para llenar dicha base de datos de forma instantánea, pero puntualmente veremos:
+
+1- MongoDB
+2- Docker-compose
+3- Volumenes de docker
+4- Semillas de base de datos
+5- Validaciones
+6- Next.js Middlewares (Nuevo desde Next.js 12.0.0)
+7- Crear en base de datos
+8- Actualizar en base de datos
+9- Leer desde base de datos
+10- Mantener persistente nuestra data
+11- Y más
+
+Es una sección muy importante porque es la primera vez que empezamos a trabajar fuertemente con el Restful API que ya nos ofrece Next.justifyContent
+
+			VIDEO 122  DOCKER-COMPOSE - CREANDO LA IMAGEN
+
+Por ahora vamos a usar docker, aunque parece que usaremos MongoAtlas en el deployIMPORTANTE: fijate que voy a crear un volumen en la propia app,y que no quiero subirlo a Github,luego en el .gitignore ignoro ese volumen:
+  services:
+    entriesdb:
+      image: mongo:5.0.0
+      container_name: entriesdb
+      ports:
+        - "27017:27017"
+      volumes:
+        - ./mongo:/data/db # si no existe el directorio lo crea
+
+En el .gitignore:
+mongo/
+
+					VIDEO 123 RESTFULL API EN NEXTJS
+
+Bien,con la DB levantada,ahora lo que necesitamos es un backend.
+NOTA: no porque Next me ofrezca la posibilidad de desarrollar un backend tengo que usar el backend de Next.Perfectamente puedo usar Next sólo para el frontend
+
+El único detalle que debo tener en cuenta es que debo filtrar la petición por el method:
+import type { NextApiRequest, NextApiResponse } from 'next';
+
+type Data = {
+  ok: boolean;
+  name: string;
+  method: string;
 };
 
-TIP: por último vamos a usar url friendly.En vez de usar pokemon/5 es mejor usar una url tipo name/bulbasaur.A los bots de Google les interesa que la url sea amigable y penalizarán que no lo sea.
- onClick={() => router.push(`/name/${pokemon.name}`)}
+export default function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) {
+  res.status(200).json({
+    ok: true,
+    name: 'John Doe',
+    method: req.method || 'no method detected',
+  });
+}
+Debo tener en cuenta que el status 200 sería para un GET,un 201 para un POST,etc,debo tener en cuenta los status code que envio también.Nada nuevo.
 
-				VIDEO 73 OPEN GRAPH META TAGS		
+		VIDEO 124 CONECTARNOS A MONGODB CON MONGOOSE
 
-Parte de ser SEO friendly es que se pueda compartir en redes los productos que se están vendiendo,etc.
-Con Open Graph Meta Tags se puede conseguir esto.Estas tags irán en el <head>  siempre comienzan con og antes de la property(de open graph?):
+NOTA: tengo un snippet llamado nextapi que me crear un controller+ruta por si borro el pages/api/hello.ts.Es buena idea esto
+Bien,para trabajar con Mongo lo mejor que puedo hacer es usar el ODM mongoose,ya que es muy cómoda su sintaxis.
+>yarn add mongoose
+Dado que necesito el siguiente video para llamar a la URI mejor pongo el código en el siguiente.
 
-<meta property="og:title" content="How to Become an SEO Expert (8 Steps)" />
-<meta property="og:description" content="Get from SEO newbie to SEO pro in 8 simple steps." />
-<meta property="og:image" content="https://ahrefs.com/blog/wp-content/uploads/2019/12/fb-how-to-become-an-seo-expert.png" />
+				VIDEO 125 VARIABLES DE ENTORNO
 
-Parece que sólo valen para Facebook,para pasarle una imagen,title,description para cuando se vea mi contenido en Facebook.
-TIP: para ver la url actual lo tengo en window.location.origin:
+Creo en la raiz del proyecto el .env.Fijate que inmediatamente despues debería ir al .gitignore e ignorar este archivo.
 
-const origin = (typeof window !== "undefined" && window.location.origin) || "";
-<meta property="og:title" content={`Información sobre ${title}`} />
-<meta property="og:description" content={`Esta es la página sobre ${title}`} />
-<meta property="og:image" content={`${origin}/img/banner.png`} />
+IMPORTANTE: Next trabaja de forma muy diferente a cra con las variables de entorno,ya que unas serán para el servidor(como este caso) y otras para el browser.No tiene sentido ninguno que el browser pueda ver la variable con la cadena de conexión.
+Para solucionar esto y ver una variable en el browser tengo que usar 'NEXT_PUBLIC' delante de la variable.Por defecto cualquier variable sólo va tener ámbito de backend,por motivos de seguridad.Desde luego pensaron en todo.
+Sabiendo todo esto,ya sí, vamos a crear la env,pero en el siguiente video.
 
-				VIDEO 74 DESPLIEGUE EN VERCEL
+		VIDEO 126 CONECTANDONOS A LA DB DEL CONTENEDOR DESDE LA API
 
-Lo mejor es desplegarlo mediante un repo remoto en Github | Gitlab o BitBucket.
-OJO: hay que especificar la rama remota a desplegar,ya que Vercel espera que sea main.O hago una PR contra main,o especifico la rama.
-Tras el deploy podría pegar una url de un pokemon en Facebook(al tratar de crear un post) y debería ver como funcionan los meta tags og.
-NOTA: cada red social tiene unos meta tags que reconoce,los de Twitter o Instagram serán diferentes,en este ejemplo sólo hemos usado el estandar.
+TIP: es buena idea crear un .env.template con solo las keys de las variables de entorno.Obviamente podria usar un markdown para lo mismo.Pero fijate que es buena idea ya que el desarrollador puede copiar y pegar:
+En el .env.template...
+MONGO_URL= <- no la relleno,pero asi el dev sabe que env lleva el proyecto
 
-TIP: Vercel se quedará en modo watch con esa rama.Cualquier commit sucesivo hará el pre-deploy de la app.
+Bien,tengo claro como dar un ámbito a una variable de entorno en Next,y que debo dejar claro que variables usa mi aplicación con un .env.template + un markdown.
+Fernando lo que va a hacer es abrir una conexión y cerrarla y aprovechar si hubiera alguna(muy pro):
+/** Estados de la conexion en mongoose
+ * 0 = disconnected
+ * 1 = connected
+ * 2 = connecting
+ * 3 = disconnecting
+ */
+const mongoConnection = {
+  isConnected: 0,
+};
 
-		SECCION 06 ISR - INCREMENTAL STATIC REGENERATION & ISG - INCREMENTAL STATIC GENERATION 
+export const connect = async () => {
+  if (mongoConnection.isConnected) {
+    return console.log('Ya estas conectado');
+  }
+  if (mongoose.connections.length > 0) {
+    mongoConnection.isConnected = mongoose.connections[0].readyState;
+    if (mongoConnection.isConnected === 1) {
+      return console.log('Usando conexión anterior');
+    }
+    await mongoose.disconnect();
+  }
 
-Esta sección es muy pequeña,pero el ISR es algo que debo conocer.Mediante Incremental Static Regeneration puedo volver a generar(regeneration) todo lo que tenia en estático(mediante Static Site Generation)cada determinado tiempo(24h,5h 7d,...)
+  try {
+    await mongoose.connect(process.env.MONGO_URL || '');
+    mongoConnection.isConnected = 1;
+    console.log('Conectado a mongoDB:', mongoose.connection.name);
+  } catch (error) {
+    console.log(error);
+  }
+};
 
-La primera conexión de un usuario que pida los datos tras ese tiempo será la única que consulte a la API,las demás se servirán desde el file system donde está la app,ya que en esa primera ocasión se recreará la caché.
-En resumen,mediante ISG creo un cache cada X tiempo(a diferencia de SSG que creó una única cache).
+export const disconnect = async () => {
+  if(mongoConnection.isConnected !== 0) return;
+  await mongoose.disconnect();
+  console.log('Desconectado de MongoDB');
+};
 
-Esta es una sección pequeña pero nos ayudará a comprender sobre dos formas de expandir nuestra generación estática con una configuración muy simple.
+En cuanto al controlador fijate varias cosas:
+type Data = {
+  message: string;
+};
 
-El objetivo es que nuestro servidor de Next pueda almacenar respuestas para su futuro uso y a la vez que pueda revalidar el contenido previamente generado.
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(401).json({
+      message: 'No tiene acceso a este servicio',
+    });
+  }
+  await db.connect();
+  await db.disconnect();
+  res.status(200).json({ message: 'Proceso realizado correctamente!' });
 
-Hay que tener en cuenta que si eligo 24h no podré cambiar nada durante cada intervalo de 24h,podría ser mucho tiempo o demasiado poco,...
+Lo primero le puedo dar el Type de la response con NextApiResponse<T>.Lo segundo,no queremos acceder a este endpoint si estamos en producción,pues usaremos MongoAtlas.
+Por último fijate que abrimos y cerramos la conexión,si,pero en ese espacio es donde haremos todo(fijate que profesional el acceso que hizo).
+En la proxima clase vamos a crear un modelo que nos dirá como luce cada una de las entidades que tenga mi app.
+
+			VIDEO 127 CREANDO UN ESQUEMA DE MONGOOSE
+
+
