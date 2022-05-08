@@ -3,8 +3,8 @@ import { EntriesState } from './';
 
 type EntriesAction =
   | { type: '[Entries] - Add-Entry'; payload: Entry }
-  | { type: '[Entries] - Remove-Entry'; payload: Entry }
-  | { type: '[Entries] - Update-Entry'; payload: Entry };
+  | { type: '[Entries] - Update-Entry'; payload: Entry }
+  | { type: '[Entries] - Get-Initial-Entries'; payload: Entry[] };
 
 export const entriesReducer = (state: EntriesState, action: EntriesAction) => {
   switch (action.type) {
@@ -13,12 +13,10 @@ export const entriesReducer = (state: EntriesState, action: EntriesAction) => {
         ...state,
         entries: [...state.entries, action.payload],
       };
-    case '[Entries] - Remove-Entry':
+    case '[Entries] - Get-Initial-Entries':
       return {
         ...state,
-        entries: state.entries.filter(
-          (entry) => entry._id !== action.payload._id
-        ),
+        entries: [...action.payload],
       };
     case '[Entries] - Update-Entry':
       return {

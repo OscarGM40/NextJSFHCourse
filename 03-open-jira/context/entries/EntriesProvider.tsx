@@ -1,36 +1,15 @@
-import { FC, useReducer } from 'react';
+import { FC, useEffect, useReducer } from 'react';
 import { Entry } from '../../interfaces';
 import { EntriesContext, entriesReducer } from './';
-import { v4 as uuidv4 } from 'uuid';
+// import { v4 as uuidv4 } from 'uuid';
+import { entriesApi } from '../../apis';
 
 export interface EntriesState {
   entries: Entry[];
 }
 
 const ENTRIES_INITIAL_STATE: EntriesState = {
-  entries: [
-    {
-      _id: uuidv4(),
-      description:
-        'Pending: lNisi sint do eiusmod enim commodo eu laborum ea reprehenderit do.',
-      status: 'pending',
-      createdAt: Date.now(),
-    },
-    {
-      _id: uuidv4(),
-      description:
-        'In progress: lNisi sint do eiusmod enim commodo eu laborum ea reprehenderit do.',
-      status: 'in-progress',
-      createdAt: Date.now() - 1000000,
-    },
-    {
-      _id: uuidv4(),
-      description:
-        'Finished: lNisi sint do eiusmod enim commodo eu laborum ea reprehenderit do.',
-      status: 'finished',
-      createdAt: Date.now() - 100000,
-    },
-  ],
+  entries: [],
 };
 
 interface EntriesProviderProps {
@@ -40,16 +19,26 @@ interface EntriesProviderProps {
 export const EntriesProvider: FC<EntriesProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(entriesReducer, ENTRIES_INITIAL_STATE);
 
-  const addNewEntry = (description: string) => {
-    const newEntry: Entry = {
+  const refreshEntries = async () => {
+    const { data } = await entriesApi.get<Entry[]>('/entries');
+    dispatch({ type: '[Entries] - Get-Initial-Entries', payload: data });
+  };
+
+  useEffect(() => {
+    refreshEntries();
+  }, []);
+
+  const addNewEntry = async (description: string) => {
+    /*     const newEntry: Entry = {
       _id: uuidv4(),
       description,
       status: 'pending',
       createdAt: Date.now(),
-    };
+    }; */
+    const resp = await entriesApi.post<Entry>('/entries', { description });
     dispatch({
       type: '[Entries] - Add-Entry',
-      payload: newEntry,
+      payload: resp.data,
     });
   };
 

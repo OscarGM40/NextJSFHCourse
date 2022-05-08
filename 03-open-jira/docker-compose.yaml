@@ -8,8 +8,8 @@ services:
         - '27021:27017'
       environment:
         - MONGO_INITDB_DATABASE=openjira
-        - MONGO_INITDB_ROOT_USERNAME=root
-        - MONGO_INITDB_ROOT_PASSWORD=root
+        # - MONGO_INITDB_ROOT_USERNAME=root
+        # - MONGO_INITDB_ROOT_PASSWORD=root
       volumes:
         - ./mongo-entrypoint:/docker-entrypoint-initdb.d
         - ./mongoconfig:/var/lib/data/configdb

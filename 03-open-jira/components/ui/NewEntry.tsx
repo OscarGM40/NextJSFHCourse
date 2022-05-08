@@ -17,7 +17,7 @@ const NewEntry = () => {
     setTouched(true);
   };
 
-  const onSave = () => {
+  const onSave = async () => {
     if (inputValue.length === 0) return;
     addNewEntry(inputValue);
     setInputValue('');

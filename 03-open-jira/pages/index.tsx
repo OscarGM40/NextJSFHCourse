@@ -11,8 +11,8 @@ const Home: NextPage = () => {
           <Card sx={{ height: 'calc(100vh - 100px)' }}>
             {/* cardheader es self-closed */}
             <CardHeader title="Pendientes" />
-            <NewEntry />
             {/* agregar una nueva entrada */}
+            <NewEntry />
             {/* listado de las entradas */}
             <EntryList status="pending" color="#990a0a" />
           </Card>

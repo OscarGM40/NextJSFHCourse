@@ -724,4 +724,224 @@ En la proxima clase vamos a crear un modelo que nos dirá como luce cada una de 
 
 			VIDEO 127 CREANDO UN ESQUEMA DE MONGOOSE
 
+Antes de nada debo de nuevo entender que en Next tengo dos ámbitos,y el frontend podría llamar a este modelo,lo cual no tiene sentido.Habrá que validar esto,ya que no estoy en Node. 
+
+* Para ello usaré un OR lógico ya que si ya está creado no necesito crearlo de nuevo.Además hay que tiparlo:
+
+const EntryModel: Model<Entry> =
+  mongoose.models.Entry || mongoose.model('Entry', entrySchema);
+
+const entry = new EntryModel();
+entry.status = 'pending'; <- si lo tipo con Model<T> tendré acceso a sus propiedaes y métodos del Model,aparte de a todos los que ya tiene por ser un Model
+
+En cuanto al Schema muy sencillo,usaré una enum para los status y un number para la Date.Fijate en el uso de un message para validaciones futuras:
+
+const entrySchema = new mongoose.Schema({
+  description: { type: String, required: true },
+  createdAt: { type: Number, required: true },
+  status: {
+    type: String,
+    enum: {
+      values: ['pending', 'in-progress', 'finished'],
+      message: '{VALUE} no es un estado permitido',
+    },
+    required: true,
+  },
+});
+export { default as Entry } from './Entry';
+Por último recuerda usar un barrel file para los imports en masa:
+export { default as Entry } from './Entry';
+
+				VIDEO 128 LLENANDO LA BASE DE DATOS
+
+Cambio la data inicial del EntriesProvider por un array vacio ya que la vamos a meter a la DB.
+export const seedData: SeedData = {
+  entries: [
+    {
+      description:
+        'Pending: lNisi sint do eiusmod enim commodo eu laborum ea reprehenderit do.',
+      status: 'pending',
+      createdAt: Date.now(),
+    },
+    {
+      description:
+        'In progress: lNisi sint do eiusmod enim commodo eu laborum ea reprehenderit do.',
+      status: 'in-progress',
+      createdAt: Date.now() - 1000000,
+    },
+    {
+      description:
+        'Finished: lNisi sint do eiusmod enim commodo eu laborum ea reprehenderit do.',
+      status: 'finished',
+      createdAt: Date.now() - 100000,
+    },
+  ],
+};
+Ahora si,recuerda que habiamos dejado un endpoint en /pages/api/seed.ts con una zona asi:
+  await db.connect();
+  await db.disconnect();
+Entre esa conexión y desconexión puedo hacer lo que quiera:
+  await db.connect();
+  await Entry.deleteMany();
+  await Entry.insertMany(seedData.entries);
+  await db.disconnect();
+
+TIP: también podia haber usado una utility type para quitar el _id:
+type SeedEntry = Omit<Entry,'_id'>
+Y lo puedo hacer con interfaces extendiendo??:
+interface SeedEntry extends Omit<Entry, '_id'> {} <- investigar
+
+			UTILITY TYPES
+
+Partial<Type>: construye un tipo con todas las propiedades opcionales(si tuviera un Type Libro{title:string,subtitle:string} un Partial<Libro> sería {title?:string;subtitle?:string}
+Required<Type>: construye un tipo con todas las propiedades requeridas de Type
+Readonly<Type> construye un tipo con todas las propiedades no-reasignables
+Record<keys,Type>: construye un objeto cuyas keys serán de tipo Key y cuyos valores serán de tipo Type:
+type Roles = 'admin' | 'user' | 'qa' | 'ux'
+interface User {
+  name: string
+}
+const users: Record<User,Roles> = {
+  admin: { name: 'paco el flaco' },
+  user: {name: 'asinto'}
+
+Pick<Type,Keys>: construye un tipo nuevo de otro Type cogiendo solo las keys que le pase
+Omit<Type,Keys>: 
+Hay más como exclude,extract
+
+			VIDEO 129 ENDPOINT PARA OBTENER TODAS LAS ENTRADAS
+
+De momento vamos a crear una ruta.Usaremos el file /pages/api/entries/index.ts para ello.La verdad es que es bastante sencillo,filtro la req.method y devuelvo lo que sea.En este caso accedo al model y hago un find():
+
+type Data = { message: string } | IEntry[] | IEntry;
+
+export default function (req: NextApiRequest, res: NextApiResponse<Data>) {
+  switch (req.method) {
+    case 'GET':
+      return getEntries(res);
+    default:
+      return res.status(400).json({ message: 'Endpoint no existe' });
+  }
+}
+
+const getEntries = async (res: NextApiResponse<Data>) => {
+  await db.connect();
+  const entries = await Entry.find({}).sort({ createdAt: 'asc' });
+  await db.disconnect();
+  res.status(200).json(entries);
+};
+
+			VIDEO 130 LEER LAS ENTRADAS DESDE EL BACKEND
+
+B2B es un comercio electrónico(el corte ingles,etc...).
+Vamos a instalar axios para ayudarnos con las peticiones:
+>npm i axios
+
+Bien,dado que estoy en Next ni siquiera tengo que especificar localhost:3000.Eso,si vamos a poner '/api' como baseUrl:
+
+const entriesApi = axios.create({
+  baseURL: '/api',
+});
+
+Bien,podemos hacer una carga inicial con las tareas que tenga la DB,con un efecto en el Provider:
+  
+const refreshEntries = async () => {
+    const { data } = await entriesApi.get<Entry[]>('/entries');
+    dispatch({ type: '[Entries] - Get-Initial-Entries', payload: data });
+  };
+
+  useEffect(() => {
+    refreshEntries();
+  }, []);
+
+La accion quedaría así en el reducer:
+   case '[Entries] - Get-Initial-Entries':
+      return {
+        ...state,
+        entries: [...action.payload],
+      };
+
+			VIDEO 131 CREAR UNA NUEVA ENTRADA
+
+De momento ni el movimiento,ni la creación de una nueva entrada son persistentes.Empecemos por el primero.Fijate que siempre voy a apuntar a /api/entries asi que ya tengo el archivo,solo tengo que ir al switch.Genial:
+
+  switch (req.method) {
+    case 'GET':
+      return getEntries(res);
+    case 'POST':
+      return postEntry(req, res); <- añado el caso para el POST
+
+Bien,recuerda que con el texto del input es suficiente,asi que vendrá sólo una description por el body:
+
+const postEntry = async (req: NextApiRequest, res: NextApiResponse<Data>) => {
+  const { description = '' } = req.body;
+  const newEntry = new Entry({
+    description,
+    createdAt: Date.now(),
+  });
+
+  try {
+    await db.connect();
+    await newEntry.save();
+    await db.disconnect();
+    return res.status(201).json(newEntry);
+  } catch (error) {
+    await db.disconnect();
+    console.log(error);
+    return res.status(500).json({ message: 'Error al guardar la entrada' });
+  }
+};
+
+Aun falta disparar todo desde el frontend
+
+			VIDEO 132 CREAR ENTRADA DESDE EL FRONTEND
+
+Lo que vamos a hacer es todo en una función,la cual ya tenemos echa:
+
+  const addNewEntry = async (description: string) => {
+    const resp = await entriesApi.post<Entry>('/entries', { description });
+    dispatch({
+      type: '[Entries] - Add-Entry',
+      payload: resp.data,
+    });
+  };
+
+Fijate que es importante mandar un object cuando sea necesario:
+const resp = await entriesApi.post<Entry>('/entries', { description });
+
+Ya solo nos queda controlar el movimiento de cada Card actualizando su status.
+
+			VIDEO 133 ACTUALIZAR UNA ENTRADA EN PARTICULAR - BACKEND
+
+Es momento de crear la lógica del PUT,y dado que es un estandar que al actualizar vaya el id en un param vamos a crearnos una ruta dinámica en vez de usar el mismo switch anterior
+
+Fijate que debería controlar que sea un MongoID válido:
+
+export default function (req: NextApiRequest, res: NextApiResponse<Data>) {
+  const { id } = req.query;
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ message: 'El Id no es válido' + id });
+  }
+
+  switch (req.method) {
+    case 'PUT':
+      return updateEntry(req, res);
+    default:
+      return res.status(400).json({ message: 'Endpoint no existe' });
+  }
+}
+
+Fijate que interesante lo que va a hacer Fernando,poniendo por defecto el valor que ya tenia anteriormente.Muy astuto:
+
+ const { status = entry.status, description = entry.description } = req.body;
+
+ const updatedEntry = await Entry.findByIdAndUpdate(
+    req.query.id,
+    { status, description },
+    { new: true }
+  );
+
+			VIDEO 134 TERMINANDO EL ENDPOINT DE ACTUALIZACIÓN
+
 

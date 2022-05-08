@@ -8,3 +8,10 @@ docker-compose up -d
 
 ## Configurar las variables de entorno
 Renombrar el __.env.template__ a __.env y rellenarlo.
+
+## LLenar la base de datos con información de pruebas
+
+LLamar al url por GET: 
+```
+http://localhost:3000/api/seed
+```
