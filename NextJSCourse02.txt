@@ -942,6 +942,84 @@ Fijate que interesante lo que va a hacer Fernando,poniendo por defecto el valor 
     { new: true }
   );
 
-			VIDEO 134 TERMINANDO EL ENDPOINT DE ACTUALIZACIÓN
+			VIDEO 135 ACTUALIZAR ENTRADA DESDE EL FRONTEND
+
+Faltaría llamar a este endpoint desde el frontend.Lo mejor que puedo hacer es seguir como hace Fernando,proveyendo funciones por el Context:
+  
+const updateEntry = async ({ _id, description, status }: Entry) => {
+    try {
+      const { data } = await entriesApi.put<Entry>(`/entries/${_id}`, {
+        description,
+        status,
+      });
+      dispatch({
+        type: '[Entries] - Update-Entry',
+        payload: data,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+Ya con lo que teniamos en el onDrop es suficiente.Recuerda como lo hizo,el componente que es la lista de cards recibe el status y lo setea constantemente en el onDrop:
+const EntryList: FC<Props> = ({ status, color }) => {
+
+  const onDropEntry = (event: DragEvent<HTMLDivElement>) => {
+    const id = event.dataTransfer.getData('ID');
+    const entry = entries.find((entry) => entry._id === id)!;
+    entry.status = status;
+    updateEntry(entry);
+    endDragging(); // importantisimo llenar
+
+			VIDEO 136 TAREA OBTENER ENTRADA POR ID
+
+Realmente muy sencillo,ya tengo el archivo con el put.Es crear un método para el get.
+
+const getEntry = async (req: NextApiRequest, res: NextApiResponse<Data>) => {
+  try {
+    await db.connect();
+
+    const { id } = req.query;
+    const entry = await Entry.findById(id);
+
+    if (!entry) {
+      await db.disconnect();
+      return res.status(404).json({ message: 'No existe la entrada' });
+    }
+
+    await db.disconnect();
+    return res.status(200).json(entry);
+  } catch (error) {
+    await db.disconnect();
+    console.log(error);
+    return res.status(400).json({ message: 'Error getting entry.' });
+  }
+};
+
+				VIDEO 137 NEXT_JS MIDDLEWARES
+
+Los Next-middlewares son una caracteristica nueva,están desde la versión 12,asi que si tengo la 11 no me funcionarán.
+IMPORTANTE: si he trabajado en Express son justamente lo mismo,una función que se pone entre la request y la response y permite ejecutar código.
+Un middleware no es más que una función que se ejecuta antes de otras cosas(del retorno de una función,de la carga de una página...)
+
+Para crear un middleware en Next simplemente hay que crear un file llamado _middleware.ts en cualquier ruta en /pages.Pero ojo,donde lo ubique es muy importante.
+Por ejemplo si creo un file en pages/about/_middeware.ts lo que haya en ese middleware se va a ejecutar antes de cualquier peticion en pages/about.
+No hay limite de middlewares,de echo en una app grande habrá varios.
+
+De echo ya he visto algo parecido con los archivos _app.tsx y _document.ts ya que funcionan como un middleware,ejecutandose antes de cualquier petición
+
+Puedo incluso hacer la prueba colocando un _middleware.ts a la altura de _app(ya que interceptará todo):
+
+export function middleware(req: NextRequest, ev: NextFetchEvent) {
+  return new Response('Hello from nasty middleware', {
+    headers: {
+      'Content-Type': 'text/plain',
+    },
+  });
+}
+
+Fijate como puedo configurar muchas cosas.Obviamente los middleware los usaré para autorizar al usuario,comprobar roles,etc...
+IMPORTANTE: para quitar el bloqueo de los middleware tengo que llamar a NextResponse.next() de forma similar a cuando llamo a next() en Express
+
+En el siguiente video vamos a realizar un middleware útil para hacer la validación de que el id sea un mongoId Valido,asi refactorizo y no repito código.
 
 
