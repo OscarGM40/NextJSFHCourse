@@ -1022,4 +1022,7 @@ IMPORTANTE: para quitar el bloqueo de los middleware tengo que llamar a NextResp
 
 En el siguiente video vamos a realizar un middleware útil para hacer la validación de que el id sea un mongoId Valido,asi refactorizo y no repito código.
 
+				VIDEO 138 VERIFICA EL ID DE MONGO
 
+Si nos fijamos en nuestra estructura de archivos, veré que tengo si o si que crear un folder en api/entries/[id] llamado asi [id] y alli crear el index.ts y el _middleware.ts.De otra forma se disparará cuando llame a simplemente entries y alli no tengo un id por los params.
+TIP:recuerda que puedo conseguir rutas dinámicas tanto con un file como con un folder.En este caso ya no me queda más que usar la forma del folder.
