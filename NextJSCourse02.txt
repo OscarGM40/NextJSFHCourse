@@ -1104,3 +1104,39 @@ En el siguiente video vamos a realizar un middleware útil para hacer la validac
 
 Si nos fijamos en nuestra estructura de archivos, veré que tengo si o si que crear un folder en api/entries/[id] llamado asi [id] y alli crear el index.ts y el _middleware.ts.De otra forma se disparará cuando llame a simplemente entries y alli no tengo un id por los params.
 TIP:recuerda que puedo conseguir rutas dinámicas tanto con un file como con un folder.En este caso ya no me queda más que usar la forma del folder.
+
+import { NextRequest, NextFetchEvent, NextResponse } from 'next/server';
+
+
+export function middleware( req: NextRequest, ev: NextFetchEvent ) {
+
+    // if (req.page.name === '/api/entries') return NextResponse.next();
+
+    const id = req.page.params?.id || '';
+
+    const checkMongoIDRegExp = new RegExp('^[0-9a-fA-F]{24}$');
+
+    if ( !checkMongoIDRegExp.test( id ) ) {
+        // return res.status(400).json({ message: 'El id no es válido ' + id })
+        return new Response( JSON.stringify({ message: 'El id no es válido ' + id }), {
+            status: 400,
+            headers: {
+                'Content-Type':'application/json'
+            }
+        });
+    }
+
+    return NextResponse.next();
+
+}
+
+
+Como resumen los middleware se ejecutan dentro de pages y dependiendo de donde esten ubicados afectarán a unas rutas u otras:
+
+			SECCION 10 FIN OPENJIRA - SERVER SIDE PROPS
+
+Esta sección tiene por objetivo aprender sobre el SSR (Server Side Rendering) que es realizado bajo solicitud del cliente. Ese es el objetivo principal y con esta sección terminaremos nuestro OpenJira.
+
+			VIDEO 143 CONTINUACIÓN OPEN JIRA
+
+

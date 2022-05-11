@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { db } from '../../../database';
-import { Entry as IEntry } from '../../../interfaces';
-import { Entry } from '../../../models';
+import { db } from '../../../../database';
+import { Entry as IEntry } from '../../../../interfaces';
+import { Entry } from '../../../../models';
 
 type Data = { message: string } | IEntry;
 
