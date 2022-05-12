@@ -1137,6 +1137,83 @@ Como resumen los middleware se ejecutan dentro de pages y dependiendo de donde e
 
 Esta sección tiene por objetivo aprender sobre el SSR (Server Side Rendering) que es realizado bajo solicitud del cliente. Ese es el objetivo principal y con esta sección terminaremos nuestro OpenJira.
 
-			VIDEO 143 CONTINUACIÓN OPEN JIRA
+			VIDEO 144 PANTALLA PARA EDITAR UNA ENTRADA
+
+Entre este video   y el siguiente vamos a crear el componente que se verá en /entrries/[id].Será una Card con el texto anterior y un input para el texto nuevo.Esto todo diseño.
+
+Primero una card responisva:
+  <Grid container justifyContent="center" sx={{ marginTop: 2 }}>
+        <Grid item xs={12} sm={8} md={6} lg={4}>
+          <Card>
+            <CardHeader
+              title="Entrada"
+              subheader={`Creada hace: ... minutos`}
+            />
+            <CardContent>
+              <TextField
+                sx={{ marginTop: 2, marginBottom: 1 }}
+                placeholder="Nueva entrada"
+                autoFocus
+                multiline
+                fullWidth
+                label="Nueva entrada"
+              />
+
+Despues una fila de RadioButtons(redondos,no confundir con CheckBoxes):
+              <FormControl>
+                <FormLabel>Estado:</FormLabel>
+                <RadioGroup row={true}>
+                  {validStatus.map((option) => (
+                    <FormControlLabel
+                      key={option}
+                      value={option}
+                      control={<Radio />}
+                      label={capitalize(option)}
+                    />
+                  ))}
+                </RadioGroup>
+              </FormControl>
+
+Fijate la facilidad para usar colores del tema:
+      <IconButton
+        sx={{
+          position: 'fixed',
+          bottom: 30,
+          right: 30,
+          backgroundColor: 'error.dark',
+        }}
+      >
+
+				VIDEO 146 MANEJO DEL FORMULARIO
+
+NOTA: para manejar el onChange de un RadioButton es igual que un input.Incluso se le pasa la misma interfaz:
+
+<RadioGroup row value={status} onChange={onStatusChange}>  <- fijate en el uso abreviado de row={true},ya que esto es redundante
 
 
+Fijate de nuevo que fácil es manejar errores con esta libreria:
+    <TextField
+                sx={{ marginTop: 2, marginBottom: 1 }}
+                placeholder="Nueva entrada"
+                autoFocus
+                multiline
+                fullWidth
+                label="Nueva entrada"
+                value={inputValue}
+                onChange={onTextFieldChange}
+                helperText={
+                  inputValue.length <= 0 && touched
+                    ? 'Debe ingresar un valor'
+                    : 'Escribe aquí la descripción de la entrada'
+                }
+                error={inputValue.length <= 0 && touched}
+              />
+
+NOTA: la aserción de tipos se puede hacer de dos formas.Con el operador 'as' es una,pero otra es con <T> antes de la variable.Ejemplo:
+
+let empCode: any = 111;
+let employeeCode = <number>code; <- igual que code as number
+
+TypeScript provides two ways to do Type Assertion. They are
+Using Angular Bracket <>
+Using as keyword
