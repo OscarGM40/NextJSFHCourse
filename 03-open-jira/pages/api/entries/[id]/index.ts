@@ -17,6 +17,8 @@ export default function (req: NextApiRequest, res: NextApiResponse<Data>) {
       return getEntry(req, res);
     case 'PUT':
       return updateEntry(req, res);
+    case 'DELETE':
+      return deleteEntry(req, res);
     default:
       return res.status(400).json({ message: 'Endpoint no existe' });
   }
@@ -71,6 +73,30 @@ const updateEntry = async (req: NextApiRequest, res: NextApiResponse<Data>) => {
     console.log(error);
     return res.status(400).json({
       message: error.errors.status.message ?? 'Error updating entry.',
+    });
+  }
+};
+
+const deleteEntry = async (req: NextApiRequest, res: NextApiResponse<Data>) => {
+  const { id } = req.query;
+
+  try {
+    await db.connect();
+    const entryDBTodelete = await Entry.findByIdAndDelete(id);
+    if (!entryDBTodelete) {
+      await db.disconnect();
+      return res
+        .status(400)
+        .json({ message: 'No hay entrada con ese id ' + id });
+    }
+    await db.disconnect();
+    return res.status(200).json(entryDBTodelete);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    await db.disconnect();
+    console.log(error);
+    return res.status(400).json({
+      message: error.errors.status.message ?? 'Error Deleting entry.',
     });
   }
 };

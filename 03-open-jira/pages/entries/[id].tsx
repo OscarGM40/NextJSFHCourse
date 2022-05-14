@@ -15,16 +15,33 @@ import {
   TextField,
   IconButton,
 } from '@mui/material';
-import { ChangeEvent, useState } from 'react';
+import { ChangeEvent, useContext, useMemo, useState } from 'react';
+import { GetServerSideProps } from 'next';
 import { Layout } from '../../components/layouts';
 import { EntryStatus } from '../../interfaces/entry';
+import { Entry } from '../../interfaces';
+import { dbEntries } from '../../database';
+import { EntriesContext } from '../../context/entries';
+import { useRouter } from 'next/router';
+import { dateFunctions } from '../../utils';
 
 const validStatus: EntryStatus[] = ['pending', 'in-progress', 'finished'];
 
-const EntryPage = () => {
-  const [inputValue, setInputValue] = useState('');
-  const [status, setStatus] = useState<EntryStatus>('pending');
+interface Props {
+  entry: Entry;
+}
+const EntryPage: React.FC<Props> = ({ entry }) => {
+  const router = useRouter();
+  const { updateEntry, deleteEntry } = useContext(EntriesContext);
+
+  const [inputValue, setInputValue] = useState(entry.description);
+  const [status, setStatus] = useState<EntryStatus>(entry.status);
   const [touched, setTouched] = useState(false);
+
+  const isNotValid = useMemo(
+    () => inputValue.length <= 0 && touched,
+    [inputValue, touched]
+  );
 
   const onTextFieldChange = (e: ChangeEvent<HTMLInputElement>) => {
     setInputValue(() => e.target.value);
@@ -36,18 +53,31 @@ const EntryPage = () => {
   };
 
   const onSaveEntry = () => {
-    if (inputValue.length === 0) return;
-    console.log({ inputValue, status });
+    if (inputValue.trim().length === 0) return;
+    updateEntry(
+      {
+        ...entry,
+        description: inputValue,
+        status,
+      },
+      true
+    );
   };
-
+  const onDelete = () => {
+    deleteEntry(entry, true);
+    router.push('/');
+  };
   return (
-    <Layout title="...">
+    <Layout title={inputValue.substring(0, 20) + '...'}>
       <Grid container justifyContent="center" sx={{ marginTop: 2 }}>
         <Grid item xs={12} sm={8} md={6} lg={4}>
           <Card>
             <CardHeader
-              title={`Entrada: ${inputValue}`}
-              subheader={`Creada hace: ... minutos`}
+              title={`Entrada:`}
+              subheader={
+                'Creada hace:' +
+                dateFunctions.getFormatDistanceToNow(entry.createdAt)
+              }
             />
             <CardContent>
               <TextField
@@ -60,11 +90,12 @@ const EntryPage = () => {
                 value={inputValue}
                 onChange={onTextFieldChange}
                 helperText={
-                  inputValue.length <= 0 && touched
+                  isNotValid
                     ? 'Debe ingresar un valor'
                     : 'Escribe aquí la descripción de la entrada'
                 }
-                error={inputValue.length <= 0 && touched}
+                onBlur={() => setTouched(true)}
+                error={isNotValid}
               />
               <FormControl>
                 <FormLabel>Estado:</FormLabel>
@@ -86,6 +117,7 @@ const EntryPage = () => {
                 variant="contained"
                 fullWidth
                 onClick={onSaveEntry}
+                disabled={inputValue.length <= 0}
               >
                 Save
               </Button>
@@ -94,6 +126,7 @@ const EntryPage = () => {
         </Grid>
       </Grid>
       <IconButton
+        onClick={onDelete}
         sx={{
           position: 'fixed',
           bottom: 30,
@@ -105,6 +138,29 @@ const EntryPage = () => {
       </IconButton>
     </Layout>
   );
+};
+
+// You should use getServerSideProps when:
+// - Only if you need to pre-render a page whose data must be fetched at request time
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const { id } = ctx.params as { id: string };
+
+  const entry = await dbEntries.getEntryById(id);
+
+  if (!entry) {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {
+      entry,
+    },
+  };
 };
 
 export default EntryPage;

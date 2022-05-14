@@ -1217,3 +1217,182 @@ let employeeCode = <number>code; <- igual que code as number
 TypeScript provides two ways to do Type Assertion. They are
 Using Angular Bracket <>
 Using as keyword
+
+				147 VALIDACIONES DEL FORMULARIO
+
+Realmente es muy fácil crear un custom error.Fijate que para que aparezca en rojo hay que usar las propiedades error + helperText(el error pondrá al helperText en rojo,sino sólo es gris):
+    helperText={
+       inputValue.length <= 0 && touched
+        ? 'Debe ingresar un valor'
+        : 'Escribe aquí la descripción de la entrada'
+    }
+    onBlur={() => setTouched(true)}
+    error={inputValue.length <= 0 && touched}
+
+Y como estamos repitiendo código,es un momento genial para memorizar esa función:
+  const isNotValid = useMemo(
+    () => inputValue.length <= 0 && touched,
+    [inputValue, touched]
+  );
+
+Y el botón también merece un disabled:
+ disabled={inputValue.length <= 0}
+
+			VIDEO 148 SSR -SERVER SIDE PROPS
+
+Next recomienda trabajar con contenido estático.Usar SSR hará que el contenido se cree en ese momento(por el navegador).
+NOTA: recuerda que cualquier función getXXX en Next se ejecuta en el servidor,asi que aqui sería el lugar donde poder acceder al token o a DBs.
+
+Bien,en cuanto a la lógica fijate que es tontería redireccionar con el router de Next en el frontend(useRouter) ya que en el return de estas funciones tengo la propiedad redirect:
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const { id } = ctx.params as { id: string };
+  if (!mongoose.isValidObjectId(id)) {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {
+      id,
+    },
+  };
+};
+Permanent a false porque la página podría existir más adelante ??.
+
+IMPORTANTE: fijate que en Next en vez de retornar la página o las props puedo retornar una redirección.De nuevo se ve claramente la potencia de Next
+
+			VIDEO 149 NAVEGAR Y CARGAR LA ENTRADA MEDIANTE SSR	
+
+Lo primero será redireccionar en el onClick sobre cada tarjeta a su vista detallada:
+const onCardClick = () => {
+  router.push(`/entries/${entry._id}`);
+};
+
+return (
+  <Card onClick={onCardClick} ...
+
+Y de igual manera en la navbar vamos a poner otro router.push hacia el home.Fijate que usaré los dos links y se llaman igual:
+<NextLink href="/" passHref>
+  <Link underline="none" color={'white'}> 
+    <Typography variant="h6">OpenJira</Typography>
+  </Link>
+</NextLink>
+Recuerda que Next hace un barrido de todos sus LInks(el NextLink en este caso),asi que la navegación será muy rápida del dashboard al detalle de cada Card.
+
+Bien,es hora de buscar por id.Para ello expondremos un helper en nuestro folder database:
+
+export const getEntryById = async (id: string): Promise<IEntry | null> => {
+  if (!mongoose.isValidObjectId(id)) {
+    return null;
+  }
+  await db.connect();
+  /* lean trae la información mínima para poder trabajar */
+  const entry = await Entry.findById(id).lean();
+  await db.disconnect();
+  return entry;
+};
+* TIP: fijate que vamos a renombrar el asterisco:
+export * as dbEntries from './dbEntries';
+
+Bien,ya puedo ver el error de serialización que decia Fernando :
+Error: Error serializing `.entry._id` returned from `getServerSideProps` in "/entries/[id]".
+Reason: `object` ("[object Object]") cannot be serialized as JSON. Please only return JSON serializable data types.
+
+El error es que sólo debo de mandar data que puede ser serializable(ese object Object parece que no lo es).
+Podria ir propiedad por propiedad y veré que el que falla es el _id:
+return {
+  props: {
+    entry: entry.description,
+
+Y es por que viene asi: ObjectId("61feefsadflnn5434545n") <- Esto no es serializable en absoluto,realmente podría ser un error de mongoose ya que nos manda todo el objeto(nos manda un objeto en vez de un string).
+NOTA: algunas fechas como el createdAt también pueden dar problemas de serialización.
+
+		VIDEO 150 SOLUCION Y CARGA DE LA ENTRADA CORRECTA
+
+La solución va a ser el parse del stringify en el helper anterior:
+ return JSON.parse(JSON.stringify(entry));
+
+NOTA: puedo ver que si mando entry._id se solucionó:
+{entry: '62767cd785c704c76505ed9f'} 'props' 
+Puede parecer un tanto rara la solución,pero es una solución universal ampliamente usada para evitar ese ObjectId("655kdfkfjk") imparseable.
+
+Ahora que ya tengo acceso a la entrada correctamente puedo cambiar los estados iniciales:
+const EntryPage: React.FC<Props> = ({ entry }) => {
+  const [inputValue, setInputValue] = useState(entry.description);
+  const [status, setStatus] = useState<EntryStatus>(entry.status);
+
+			VIDEO 151 GUARDAR INFORMACIÓN DESDE LOS DETALLES DE LA ENTRADA
+
+Realmente ya hicimos el reducer y proveimos la funcion updateEntry,solo hay que llamarla,con cuidado de poner bien los valores:
+  const onSaveEntry = () => {
+    if (inputValue.trim().length === 0) return;
+    updateEntry({
+      ...entry,
+      description: inputValue,
+      status,
+    });
+  };
+La clave está en ...entry para mantener el id y createdAt.Bien,sin embargo vemos que no tenemos mucha retroalimentación de lo que estamos haciendo.En este punto vamos a usar snackbars(tipicos popup informativos)
+NOTA: si bien podríamos usar los snackbar de MUI vamos a usar una libreria que es aún más sencilla para usar snackbars:
+>npm install notistack
+
+Lamentablemente tengo que usar un Provider para poder usar snackbars en toda la app.Usaremos _app como punto alto y este Provider antes del de Entries,ya que necesitamos visión sobre EntriesProvider y las entries,lógicamente.
+
+import { SnackbarProvider } from 'notistack';
+
+function MyApp({ Component, pageProps }: AppProps) {
+  return (
+    <SnackbarProvider maxSnack={3}>
+      <EntriesProvider>
+        <UIProvider>
+          <ThemeProvider theme={darkTheme}>
+            <CssBaseline />
+            <Component {...pageProps} />
+          </ThemeProvider>
+        </UIProvider>
+      </EntriesProvider>
+    </SnackbarProvider>
+
+Ahora,para trabajar con un snackbar la libreria ofrece un customHook(useSnackbar):
+ const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+ enqueueSnackbar('Se actualizó la entrada', {
+    variant: 'success',
+    autoHideDuration: 2000,
+    anchorOrigin: {
+      vertical: 'top',
+      horizontal: 'right',
+        },
+      });
+
+			VIDEO 152 CALCULAR TIEMPO DESDE LA PUBLICACIÓN
+
+Para parsear ese number que representa el createdAt vamos a usar la libreria date-fns:
+>npm i date-fns
+Ahora nos creamos el barrel file y el folder utils:
+export * as dateFunctions from './dateFunctions';
+
+Fijate que exportar * as xxx es como crearme mi propia libreria.Tendré visión en todo el proyecto :
+
+export * as dateFunctions from './dateFunctions';
+
+No puede ser más fácil implementar esta función:
+
+  <Typography variant="body2">
+     {dateFunctions.getFormatDistanceToNow(entry.createdAt)}
+   </Typography>
+
+La función helper,si bien ya me habia cogido el locale,cuando lo grabó Fernando parece que había que pasarlo:
+
+import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/esm/locale';
+
+export const getFormatDistanceToNow = (date: number) => {
+  const fromNow = formatDistanceToNow(date, { locale: es });
+  return fromNow;
+};
+
