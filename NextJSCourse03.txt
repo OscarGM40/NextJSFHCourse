@@ -1,1 +1,286 @@
-.
+					SECCION 11 COOKIES MASTER APP
+
+En esta sección Fernando mostrará porqué las cookies son importantes en una aplicación de Next.En general las cookies viajan bajo request(es decir, cada vez que el usuario pida algo o reciba algo).Las cookies son simplemente un string(si quisiera mandar un number tengo que pasarlo a string y un array o un object tengo que serializarlo con JSON.Stringify,y obviamente deserializarlo despues con JSON.parse)
+
+Mediante cookies puedo saber muchas cosas,como lo que busca normalmente un usuario,para sugerir mejores productos o más interesantes para él/ella.
+
+El objetivo de esta sección es aprender a manejar las Cookies en nuestra aplicación de Next.js, comprendiendo la diferencia entre ellas y el localstorage.
+
+Eventualmente aprenderemos diferentes formas de leerlas y usarlas.
+
+También este ejercicio se presta para explicar un error sumamente común en aplicaciones de Next donde el Frontend y Backend renderizan contenido diferente, aquí la explicación del por qué y su solución
+
+		VIDEO 156-157 INICIO PROYECTO COOKIE MASTER & INSTALACIÓN MATERIAL UI
+
+TIP: puedo usar la propiedad bin en el package.json y agregar un alias que apunte a un binario:
+"bin": {
+  "nodemon": ".bin/nodemon index.js"
+} <- podria haber llamado a la key Nodemon en vez de nodemon,por ejemplo(es un alias).
+* Si fuera al repo de la libreria veré en la carpeta bin el archivo que ejecutará la libreria
+IMPORTANTE: puedo crear comandos pre<command> y post<command> que se ejecutarán antes y despues de ese comando.Ejemplo:
+"prestart":"echo empezando",
+"start":"node index.js",
+"poststart":"echo terminado" <- vale para todos??
+La sintaxis es asi ,usar pre y post seguido del nombre exacto del comando(npm busca siempre al ejecutar un comando por sus homólogos con pre y post,asi que hay que tener cuidado pues los ejecutará siempre!)
+
+NOTA: al usar npx si me dice que necesita instalar algún paquete ese paquete lo instala sólo temporalmente(en algun folder del sistema operativo)
+npx create-react-app
+Need to install the following packages: <- instalación temporal
+* Sólo lo instalará si no lo encuentra en esa carpeta temporal primero,asi que es tremendamente eficaz
+
+Bien,volvamos a Next,creamos una app con yarn y next:
+>yarn create next-app --typescript <- ya me pedirá el nombre
+>yarn add @mui/material @emotion/react @emotion/styled
+NOTA: recuerda que Mui usa emotion pero puedo usar styled components(aunque la instalación cambiará,ver documentación)
+
+IMPORTANTE: creo el Theme Provider con el gist al que haré folk.También creo el _document.tsx para el CDN de la fuente.Y recuerda meter un Reset con CSSBaseline.
+
+				VIDEO 158 LAYOUT Y PÁGINAS ADICIONALES
+
+Vamos a crear ciertas páginas adicionales aparte de una navbar y el layour para ver que data traigo cuando haga el getInitialProps.Aún no hay nada de cookies
+IMPORTANTE: el archivo .gitattributes es un archivo de configuración que me permite asignar ATRIBUTOS a otros archivos y directorios en mi proyecto,y así indicarle a Git de que manera debe tratarlos.Lo usaré para estandarizar el EOL y quizas algun encoding.
+
+NOTA: fijate que estoy exportando los componentes con named Exports(rafc y no rafce).Esto es porque son componentes,los que si que van por default son las pages que vayan en /pages(rafce)
+
+TIP: b y B o w y W o e y E no son lo mismo(la mayúscula ignora ciertos caracteres)
+w va de inicio en inicio de word y e de final en final
+con xp transpongo el caracter actual con el siguiente,muy útil
+
+			VIDEO 159 PAGINA PARA CAMBIAR EL TEMA
+
+Hagamos la UI para el ThemeChanger.Nada complicado un grupo de RadioButtons valdrá
+const ThemeChanger: NextPage = () => {
+  const [currentTheme, setCurrentTheme] = useState('light');
+
+  const onThemeChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setCurrentTheme(() => event.target.value);
+  };
+
+  return (
+
+    <Layout>
+      <Card>
+        <CardContent>
+          <FormControl>
+            <FormLabel>Tema</FormLabel>
+            <RadioGroup name={currentTheme} onChange={onThemeChange}>
+              <FormControlLabel value="light" control={<Radio />}
+                label="Light"
+              />
+              <FormControlLabel value="dark" control={<Radio />}
+                label="Dark" />
+              <FormControlLabel value="custom" control={<Radio />}
+                label="Custom"
+              />
+            </RadioGroup>
+          </FormControl>
+        </CardContent>
+      </Card>
+    </Layout>
+
+Ya veré como decide guardarlo Fernando de forma global(si lo decide).
+
+				VIDEO 160 LOCAL STORAGE VS COOKIES
+
+Fijate que el paquete que recomienda Fernando tiene muchas descargas semanales.Es un estandar usarlo cuando se necesite manejar cookies(crearlas,leerlas,borrarlas y/o actualizarlas).
+NOTA: toda la parte del backend en Next no necesita expandir utilidad mediante esta libreria,pero no sucede lo mismo para el entorno browser,es por esto que lo usaremos.
+
+IMPORTANTE: debo diferenciar entre el localstorage,que es un espacio físico en la máquina anfitriona de la app(el usuario),donde puedo almacenar pares de clave-valor as strings; y las cookies.
+
+TIP: js-cookie no está escrita en Typescript pero tiene los archivos de definición
+Bien,con todo esto instalo la libreria y sus definition types:
+>yarn add js-cookies
+>yarn add -D @types/js-cookies
+
+import Cookies from 'js-cookie';
+
+  const onThemeChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setCurrentTheme(() => event.target.value);
+    localStorage.setItem('theme', currentTheme);
+    Cookies.set('theme',currentTheme);
+  };
+
+Ahora podré ver las cookies en la misma pestaña Application,un poco más abajo.Me vendrán más datos como el dominio donde vive(las cookies pueden pasarse entre dominios)
+NOTA: tanto el localStorage como las cookies son manipulables por el cliente.Solo tienen que ir a la pestaña y tipear algo.
+Las cookies sólo pueden albergar 4kbs de información,pero como beneficio son mandadas al backend en request-time(automáticamente??)
+
+				VIDEO 161 LEER LAS COOKIES
+
+ Lo primero que vamos a hacer es llamar al método getServerSideProps.Recuerda que llamar a estos métodos implicitamente hará que la página sea generada mediante SSR de lado del servidor(lo cual lo hace más lento que si fuera estática).
+Entiendo que no llamar a una función hace la page estática por defecto(confirmar).
+IMPORTANTE: para leer la cookie en Next de lado del servidor(es decir,dentro de esta función getServerSideProps) no necesito acceso con la lib js-cookie,en un ambiente de servidor tengo acceso mediante el ctx(argumento de la función):
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  console.log(ctx.req) <- en Next tengo acceso a toda la request que hace el cliente 
+
+Claro que el objeto es demasiado grande,podría entrar mediante los headers a las cookies pero también mediante la propiedad cookies:
+  console.log(ctx.req.headers.cookie); <-o bien ->
+  console.log(ctx.req.cookies);
+
+Asi pues,puedo acceder a la cookie con el tema que metiamos en el onChange de los 3 radioButtons(recuerda que lo metiamos en un estado,en el localStorage y en una cookie):
+
+  const { theme = 'light', name = 'No name' } = ctx.req.cookies;
+
+  return {
+    props: {
+      theme,
+      name,
+    },
+
+TIP: Usualmente las cookies se usan para regresar una página a la medida de la request del cliente,es decir,personalizada(en realidad la cookie está hecha para intercambiar información,y ya de ahi se lee y personaliza la página)
+
+				VIDEO 162 LEER COOKIES DESDE LA API DE NEXT
+
+Ya he visto dos formas de leer las cookies.Una es accediendo mediante el ctx a la req y despues a las cookies.La otra es con un simple effect leyendo del localStorage y del cookiesStorage(ya que estoy en el browser)	
+Instalemos axios para hacer peticiones cual asintos:
+>yarn add axios
+
+Bien,si ahora hacemos una petición a nuestro file pages/api/hello.ts:
+  const handleClick = async () => {
+    const { data } = await axios.get('/api/hello');
+    console.log(data);
+  };
+puedo ir a esa página y también acceder a las cookies mediante la request:
+
+export default function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) {
+  console.log(req.cookies)
+  res.status(200).json({ name: 'John Doe' })
+}
+
+Asi pues también puedo acceder desde la REST embebida.Y obviamente puedo mandarlas como regreso:
+res.status(200).json({ ...req.cookies, name: 'John Doe' })
+Esta es otra forma más que tengo para acceder a las cookies(devolverlas en la petición)
+En el siguiente video veré un error bastante común que hacemos los devs con las cookies y cambiaremos el tema basado en las cookies.
+
+				VIDEO 163 CAMBIAR EL TEMA BASADO EN LA COOKIE
+
+Recordemos que el usuario puede acceder al storage de las cookies de su disco duro y cambiar el literal.Habría que validar esto antes, por ejemplo, poniendo un valor por defecto,tras extraer la cookie:
+
+  const { theme = 'light', name = 'No name' } = ctx.req.cookies;
+  
+  const validThemes = ['light', 'dark', 'custom'];
+
+  return {
+    props: {
+      theme: validThemes.includes(theme) ? theme : 'light',
+
+Ahora si, vamos al _app.tsx
+NOTA: de nuevo,recuerda que estas funciones sólo funcionarán en una página de Next.Si bien esto viene determinado por la ubicación física del archivo, también puedo ayudarme de la interfaz NextPage<T> para dejar más claro que es una página.
+
+Fijate que probamos desde _app.tsx a llamar a getServerSideProps pero como no es una page no veo la cookie.Es aqui donde entra una función nueva especial de Next
+
+				FUNCTION GETINITIALPROPS
+
+No es recomendado usarla,se recomienda usar getServerSideProps o getStaticProps.Veamos como implementarlo:
+
+MyApp.getInitialProps = async( ctx: AppContext) => {
+ return {}
+}
+* Importante,el ctx es de tipo AppContext y se llama según el nombre del componente.Además debe resolver a un objeto(return {})
+
+Sabiendo todo esto quedaría asi:
+
+MyApp.getInitialProps = async (ctx: AppContext) => {
+  const cookies = ctx.ctx.req
+    ? (ctx.ctx.req as any).cookies
+    : { theme: 'light' };
+  const validThemes = ['light', 'dark', 'custom'];
+
+  return {
+    theme: validThemes.includes(cookies.theme) ? cookies.theme : 'light',
+  };
+};
+
+Y ya veré en el rest al theme:
+function MyApp({ Component, pageProps, ...rest }: AppProps) {
+  console.log(rest);
+
+		VIDEO 164 GENERAR LA PÁGINA CON EL TEMA SOLICITADO
+
+Si bien podría usar la aserción de tipos para acceder al theme de esta forma:
+  const key = (rest as any).theme;
+  const tema = themes[key as "light" | "dark" | "custom"];
+lo mejor es extender la interfaz:
+
+const themes ={ 
+  'light': lightTheme,
+  'dark': darkTheme,
+  'custom': customTheme,
+}
+
+interface Props extends AppProps {
+  theme: "light" | "dark" | "custom";
+}
+function MyApp({ Component, pageProps, theme }: Props) {
+  
+  return (
+    <ThemeProvider theme={themes[theme]}>
+
+Bien,todo está correcto,pero el tema no cambia en tiempo real a no ser que haga un refresh.Podríamos crear un contexto,etc
+
+NOTA: usar getInitialProps implica perder Static Generation(ya que pasa a ser renderización en el server).
+IMPORTANTE: haber usado getInitialProps en el _app.tsx es recursivo e implica que ninguna pagina pueda ser estática,si bien usarlo en una pagina puede no ser tan malo usarlo en el _app es una operación muy a tener en cuenta.
+Puedo ver esto con un yarn build:
+├ λ /404                                   193 B          89.9 kB
+├ λ /about                                 262 B            90 kB
+├ λ /api/hello                             0 B            89.7 kB
+├ λ /contact                               262 B            90 kB
+└ λ /theme-changer  
+λ  (Server)  server-side renders at runtime (uses getInitialProps or getServerSideProps)
+
+Recuerda que cualquier page por defecto es estática,y me ha cambiado todas a SSR,cuando solo tenia que haber cambiado theme-changer,contact o about deberían ser estáticas.
+
+				VIDEO 165 ESTABLECER EL THEME EN TIEMPO REAL
+
+Bien,llegados a este punto vamos a rechazar el uso en el _app de getInitialProps por motivos obvios.Fijate que pareciera que Fernando se está complicando,es decir,no podría hacer simplemente esto?:
+
+const themeB = Cookies.get('theme') as "light" | "dark" | "custom" || 'light';
+y asi obtener la cookie?
+
+* Parece que no,pues nos da este error:
+next-dev.js?3515:25 Warning: Prop `className` did not match. Server: 
+
+Este error viene porque los valores de la cookie son diferentes en el servidor y en el cliente.
+La solución siempre fue bien fácil,y es usar un useEffect en ese _app.tsx.Un useEffect sólo se ejecutará del lado del browser,y además nunca se ejecutará en el servidor.
+
+  const [currentTheme, setCurrentTheme] = useState<Tema>('light');
+  
+  useEffect(() => {
+    const themeB = Cookies.get('theme') as Tema || 'light';
+    setCurrentTheme(themeB);    
+  },[]);
+
+Al final fijate que hubo que refrescar para cambiar el tema,aunque si se hace el yarn build y yarn start el cambio es apenas inperceptible,pero no quedó automatizado.No era ese el objetivo?
+
+La solución siempre fue bien fácil,y es usar un useEffect en ese _app.tsx.Un useEffect sólo se ejecutará del lado del browser,y además nunca se ejecutará en el servidor.
+
+  const [currentTheme, setCurrentTheme] = useState<Tema>('light');
+  
+  useEffect(() => {
+    const themeB = Cookies.get('theme') as Tema || 'light';
+    setCurrentTheme(themeB);    
+  },[]);
+
+Al final fijate que hubo que refrescar para cambiar el tema,aunque si se hace el yarn build y yarn start el cambio es apenas inperceptible,pero no quedó automatizado.No era ese el objetivo?
+
+				SECCION 12 TESLO-SHOP ECOMMERCE CON NEXT
+
+Esta sección es puramente diseño UI.En esta sección crearemos la mayor parte de las pantallas que necesitaremos junto a los estilos necesarios.
+Entre los temas puntuales veremos:
+1- MaterialUI
+2- Temas
+3- Uso de SX Style junto a page breakpoints
+4- Responsive design
+5- Página 404 personalizada
+6- Reutilización de componentes
+
+Es una sección donde trabajaremos en el estilo principalmente para después enfocarnos en la lógica
+
+		VIDEO 170 INICIO PROYECTO - INSTALACIONES Y CONFIGURACION DE MUI
+
+
+
+
