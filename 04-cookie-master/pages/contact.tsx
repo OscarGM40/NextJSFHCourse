@@ -1,8 +1,6 @@
-import { NextPage } from "next"
+import { NextPage } from 'next';
 
-const ContactPage: NextPage= () => {
-  return (
-    <div>ContactPage</div>
-  )
-}
-export default ContactPage
+const ContactPage: NextPage = () => {
+  return <div>ContactPage</div>;
+};
+export default ContactPage;

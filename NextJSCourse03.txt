@@ -279,8 +279,98 @@ Entre los temas puntuales veremos:
 
 Es una sección donde trabajaremos en el estilo principalmente para después enfocarnos en la lógica
 
+			EXTRA INTRODUCIR SISTEMA TRADUCCIONES EN NEXT
+
+Desde la v10 se puede usar este sistema.Lo primero será crear un proyecto de next,y despues en el next.config.js añadir al module.exports el objeto i18n:
+
+module.exports = {
+  i18n: {
+    defaultLocale: 'es', // idioma por defecto
+    locales: ['es','en','fr'] // idiomas soportados
+  }
+}
+TIP: en Next tengo el valor de locale(es decir,el idioma actual) en el router:
+const router = useRouter():
+console.log(router.locale) <- 
+IMPORTANTE: llegados a este punto la gestión de la internacionalización por parte de Next es bastante confusa,lo mejor es usar una lib externa como next-translate(apenas pesa 1Kb y es super-simple):
+
+PASO UNO: instalar la lib
+>yarn add next-translate
+
+PASO DOS: añadir el plugin en el next.config.js
+const nextTranslate = require('next-translate');
+
+module.exports= nextTranslate({
+  reactStrictMode: true,
+)}
+* Cualquier configuración previa la meto en el argumento de nextTranslate
+
+PASO TRES: crear el i18n.js | json y los archivos en locales/en/xxx.json.
+PASO CUATRO: consumir las traducciones con el hook useTranslation que viene de eta libreria next-translate(fijate que puedo cambiar la ruta de los locales,etc):
+
+import useTranslation from 'next-translate/useTranslation'
+
+export default function ExamplePage() {
+  const { t, lang } = useTranslation('common')
+  const example = t('variable-example', { count: 42 })
+
+  return <div>{example}</div> 
+IMPORTANTE: la libreria permite crear namespaces o pequeños entornos con su idioma dentro de la app,pudiendo usar un idioma en ese ns y otro diferente en otro.
+TIP: para que pase el eslint usar type:module en el package.json e import xxx from en el next.config.js.
+
 		VIDEO 170 INICIO PROYECTO - INSTALACIONES Y CONFIGURACION DE MUI
 
+Creo un nuevo proyecto con yarn,next y typescript:
+yarn create next-app --typescript <- muy pro
+Instalo la libreria para internacionalización y el linter,etc...
 
+Despues instalo con yarn material(mui5):
+yarn add @mui/material @emotion/react @emotion/styled
 
+Para pegar la CDN con la fuente Roboto debo crear un _document.tsx con el snipet y dentro del <Html><Head> pego el <link>
+Sigo con los iconos:
+yarn add @mui/icons-material
 
+Tras esto descargo el recurso que proporciona Fernando.Fijate que en database/products.ts tengo la mockData,y que me da el tema y unos estilos iniciales,además de las imágenes.Genial
+
+Fijate también como es demasiado sencillo sobrescribir como lucirá un <Button> con el <ThemeProvider>.Realmente parece muy buena esta libreria:
+
+* Si quiero que una Card luzca,por ejemplo,sin elevation,con un boxShadow concreto y un borderRadius de 10px.Muy interesante.
+
+    MuiCard: {
+      defaultProps: {
+        elevation: 0
+      },
+      styleOverrides: {
+        root: {
+          boxShadow: '0px 5px 5px rgba(0,0,0,0.05)',
+          borderRadius: '10px',
+        }
+      }
+    }
+Lo mismo para una MuiAppbar,MuiTypography,etc.Gran libreria.
+
+			VIDEO 172 ESTRUCTURA DE DIRECTORIOS Y SHOP-LAYOUT
+
+Simplemente seguir el video.Fijate los layouts que interesante y las meta-tags para Redes Sociales:
+  <Head>
+    <title>{title}</title>
+    <meta name="description" content={pageDescription} />
+    <meta name="og:title" content={title} />
+    <meta name="og:description" content={pageDescription} />
+    {imageFullUrl && <meta name="og:image" content={imageFullUrl} />}
+  </Head>
+Fijate que ya no viene el Children por defecto en React.FC.
+Posiblemente tenga que retocar las traducciones.Cuanto antes lo haga mejor.
+import { FC,PropsWithChildren, ReactNode } from 'react';
+
+interface Props {
+  title: string;
+  pageDescription: string;
+  imageFullUrl?: string;
+}
+export const ShopLayout: FC<PropsWithChildren<Props>> = ({
+  children,
+Otra opcion es simplemente usar children?: ReactNode; en la interfaz Props
+
+						VIDEO 173 NAVBAR

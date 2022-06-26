@@ -5,7 +5,7 @@ import {
   FormControlLabel,
   FormLabel,
   Radio,
-  RadioGroup
+  RadioGroup,
 } from '@mui/material';
 import Cookies from 'js-cookie';
 import { GetServerSideProps, NextPage } from 'next';
@@ -13,7 +13,7 @@ import { ChangeEvent, useEffect, useState } from 'react';
 import { Layout } from '../components/layouts';
 
 interface Props {
-  theme: "light" | "dark" | "custom";
+  theme: 'light' | 'dark' | 'custom';
 }
 const ThemeChanger: NextPage<Props> = ({ theme }) => {
   const [currentTheme, setCurrentTheme] = useState('light');
@@ -31,7 +31,7 @@ const ThemeChanger: NextPage<Props> = ({ theme }) => {
     }
   }, [setCurrentTheme]);
 
-/*   useEffect(() => {
+  /*   useEffect(() => {
     console.log('LocalStorage', localStorage.getItem('theme'));
     console.log('Cookie', Cookies.get('theme'));
   });
@@ -83,7 +83,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   // console.log(ctx.req.headers.cookie); | console.log(ctx.req.cookies);
 
   const { theme = 'light', name = 'No name' } = ctx.req.cookies;
-  
+
   const validThemes = ['light', 'dark', 'custom'];
 
   return {

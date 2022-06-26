@@ -5,28 +5,28 @@ module.exports = {
     node: true,
   },
   extends: [
-    "plugin:react/recommended",
-    "standard",
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "plugin:prettier/recommended",
+    'plugin:react/recommended',
+    'standard',
+    'eslint:recommended',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:prettier/recommended',
   ],
   settings: {
     react: {
-      version: "detect",
+      version: 'detect',
     },
   },
-  parser: "@typescript-eslint/parser",
+  parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaFeatures: {
       jsx: true,
     },
-    ecmaVersion: "latest",
-    sourceType: "module",
+    ecmaVersion: 'latest',
+    sourceType: 'module',
   },
-  plugins: ["react", "@typescript-eslint", "prettier"],
+  plugins: ['react', '@typescript-eslint', 'prettier'],
   rules: {
-    "react/react-in-jsx-scope": "off",
-    "react/prop-types": "off",
+    'react/react-in-jsx-scope': 'off',
+    'react/prop-types': 'off',
   },
 };
