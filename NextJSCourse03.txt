@@ -374,3 +374,669 @@ export const ShopLayout: FC<PropsWithChildren<Props>> = ({
 Otra opcion es simplemente usar children?: ReactNode; en la interfaz Props
 
 						VIDEO 173 NAVBAR
+
+IMPORTANTE: Material recomienda usar todos sus componentes,como por ejemplo Box.Aunque pueda parecer que es un simple <div> no es así,ya que usar un componente suyo me da acceso al tema,o a atributos como sx,o incluso usar CSS condicional :
+
+ <Box sx={{display:{xs:'none',sm: 'block'}}}>
+    <NextLink href="/category/men" passHref>
+  <Link>
+    <Button> {t('navbarMen')}</Button>
+  </Link>
+    </NextLink>
+
+    <NextLink href="/category/women" passHref>
+  <Link>
+    <Button>{t('navbarWomen')}</Button>
+  </Link>
+    </NextLink>
+
+   <NextLink href="/category/kids" passHref>
+     <Link>
+       <Button>{t('navbarKids')}</Button>
+     </Link>
+  </NextLink>
+</Box>
+Fijate como puedo acceder a sx para acceder a un custom style y a los breakpoints de material y cambiar el display de none a block(ocultando en mobile los iconos centrales de la navbar)
+
+					VIDEO 174 PAGINA 404
+
+Aunque Next ya provee una pagina 404 el usuario pierde el control de a que pagina regresar,vision sobre la Navbar,sobre el Cart de compras,etc...
+En Next es sumamente fácil crear una pagina para un statusCode concreto(simplemente hay que crear el file pages/404.tsx para los errores 404 y lo mismo para otro error,por ejemplo,podria crear el file pages/401.tsx para gestionar un posible error 401 del back.
+Asi pues,creo ese file pages/404.tsx
+NOTA: recuerda que las pages en Next tienen que usar la exportación por defecto
+const Custom404Page = () => {
+  return (
+    <ShopLayout
+      title="Page not found"
+      pageDescription="No hay nada que mostrar aqui"
+    >
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        height="calc(100vh - 200px)"
+        sx={{ flexDirection: { xs: 'column', sm: 'row' } }}
+      >
+        <Typography variant="h1" component="h1" fontSize={80} fontWeight={200}>
+          404 |
+        </Typography>
+        <Typography marginLeft={2}>Page not found</Typography>
+      </Box>
+    </ShopLayout>
+  );
+};
+export default Custom404Page;
+
+No puede ser más fácil trabajar con Next.
+
+					VIDEO 175 HOMEPAGE - TEMPORAL
+
+Vamos a volver a la homePage(ya que apenas le pusimos un par de typographies).
+IMPORTANTE: recuerda que en Material tengo <Grid container> y <Grid item> para los hijos y el contenedor(por ejemplo,tres columnas en md,tres filas en xs y en sm dos columnas y la tercera saltará una fila:
+   <Grid container spacing={4}>
+        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={4}>
+  </Grid>
+
+NOTA: el componente CardMedia carga las imagenes bajo demanda.Otra feature top de material:
+      <Grid container spacing={4}>
+        {initialData.products.map((product) => (
+          <Grid item xs={6} sm={4} key={product.slug}>
+            <Card>
+              <CardActionArea>
+                <CardMedia <- carga bajo demanda(segun vaya entrando la imagen al viewport se carga)
+                  component="img"
+                  image={`products/${product.images[0]}`}
+                  alt={product.title} <- recuerda que alt mejora el SEO ya que da info extra a los screenReaders que usa gente con deficiencias visuales
+                />
+              </CardActionArea>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+Puedo observar como el CardMedia es genial,da un efecto splash muy bonito en el onClick,carga bajo demanda,viene con un BoxShadow,...
+
+				VIDEO 176 SIDEMENU - MENULATERAL
+
+Es hora de crear la UI para un Menu Lateral.Desde luego es algo muy sencillo también con Material.Hay que usar su componente Drawer(que necesita de las props open y onClose,etc):
+
+import { Box, Drawer, List, ListItem } from '@mui/material';
+
+export const SideMenu = () => {
+  return <Drawer open={true} anchor="right">
+    <Box>
+      <List>
+        <ListItem>
+          
+        </ListItem>
+      </List>
+    </Box>
+  </Drawer>;
+};
+
+Dado que es algo repetitivo y sencillo FH deja el código en resources.
+
+IMPORTANTE:para que se oscurezca el fondo usaremos la propiedad de CSS backdropFilter:
+<Drawer open={true} anchor="right" sx={{ backdropFilter: 'blur(4px)', transition: 'all 0.5s ease-out' }}> <- animado para que haga el difuminado gradualmente.
+
+Esto es algo de CSS y que debo memorizar,ya que oscurece el fondo,algo muy común.Practicar con ella
+Fijate que el backdropFilter va sobre el drawer entero,no sobre su contenido
+Queda espectacular.
+
+En cuanto a los ListItem fijate que ha mejorado la libreria y solo necesita un par de propiedades como primary para el text o button para que sea un botón y el icono entre ListItemIcon,mucho más sencillo que lo que hice yo:
+
+   <ListItem button sx={{ display: { xs: '', sm: 'none' } }}>
+      <ListItemIcon>
+         <FemaleOutlined />
+      </ListItemIcon>
+      <ListItemText primary={'Mujeres'} />
+   </ListItem>
+
+De momento lo hacemos en duro,parece que refactorizaremos esto.
+
+			VIDEO 177 COMPONENTE PARA MOSTRAR PRODUCTOS
+
+Realmente la pagina para mostrar productos para Woman | Man | Kids es la misma.Solamente cambiarán las imágenes.En este primer video simplemente abstraemos la lógica a sus componentes,ya que estaba todo junto en el index.
+
+IMPORTANTE:en el video 178 FH introduce un concepto muy importante,fijate como va a memorizar en base a una condicion(con lo que se puede usar useMemo + condicionales)
+
+export const ProductCard: FC<Props> = ({ product }) => {
+ * Primero creo un estado boleano(en este caso para ver si está el mouse encima)
+  const [isHovered, setIsHovered] = useState(false);
+
+* ahora si,si es isHovered memorizaré una cosa,sino otra(obviamente va como dependencia):
+  const productImage = useMemo(() => {
+    return isHovered
+      ? `products/${product.images[1]}`
+      : `products/${product.images[1]}`;
+  }, [isHovered]);
+* Y simplemente cambio el boleano con los eventos onMouseEnter y onMouseLeave
+  return (
+    <Grid
+      item
+      xs={6}
+      sm={4}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <Card>
+        <CardActionArea>
+          <CardMedia
+            component="img"
+            image={productImage} <- la imagen cambiará en el acto
+            alt={product.title}
+          />
+        </CardActionArea>
+      </Card>
+
+recuerda puedo usar const variable = useMemo( () => {
+  return condicion ? 'retorno si es true': 'retorno otra cosa si es false'
+},[condicion]);
+Y fijate que si estoy usando ternarios podré usar simplemente un dobel ampersand ,en resumen,useMemo puede usarse condicionalmente.
+
+NOTA: usar material tmb me permite usar la clase built-in 'fadeIn'.Tengo visión sobre esta clase desde cualquier componente que pueda aplicarle un fadeIn
+      <CardMedia
+            component="img"
+            className="fadeIn" <- clase ya predefinida
+            image={productImage}
+            alt={product.title}
+          />
+        </CardActionArea>
+      </Card>
+      <Box sx={{ mt: 1 }} className="fadeIn">
+
+No sólo esto,sino que el CarMedia tiene tmb predefinido el método onLoad,por si quiero mostrar un spinner/fallback mientras carga cada imagen.
+
+				VIDEO 179 PANTALLA DE PRODUCTO
+
+Lo primero será que al hacer click sobre una Card haga el routing hacia otra page.Usaremos un NextLink y un Link de Material.Recuerda que hay que pasar el boleano passHref a true para que le pase la funcionalidad al Link de Material.
+    <Card>
+        <NextLink href="/product/slug" passHref prefetch={false}>
+          <Link>
+            <CardActionArea>
+              <CardMedia
+                component="img"
+                className="fadeIn"
+                image={productImage}
+                alt={product.title}
+              />
+            </CardActionArea>
+          </Link>
+        </NextLink>
+      </Card>
+Además,en este caso no queremos que haga el prefetch de tantas Cards,asi que lo ponemos a false.
+
+Bien,y en cuanto a esa pantalla de producto realmente serán dos columas a 7 y 5(y a 12 cada una en xs):
+ <Grid container spacing={3}>
+        <Grid item xs={12} sm={7}>
+          {/* Slideshow */}
+        </Grid>
+        <Grid item xs={12} sm={5}>
+          <Box display="flex" flexDirection="column">
+            {/* titulos */}
+            <Typography variant="h1" component="h1">
+              {product.title}
+            </Typography>
+            <Typography variant="subtitle1" component="h2">
+              {`$${product.price}`}
+            </Typography>
+            {/* Quantity */}
+            <Box sx={{ my: 2 }}>
+              <Typography variant="subtitle2">
+                {t('productQuantity')}
+              </Typography>
+              {/* ItemCounter */}
+            </Box>
+            {/* Agregar al carrito */}
+            <Button color="secondary" className="circular-btn">
+              {t('productAddToCart')}
+            </Button>
+            {/* <Chip label={t('productNotAvailable')} color="error" variant="outlined"/> */}
+            {/* Description */}
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle2">
+                {t('productDescription')}
+              </Typography>
+              <Typography variant="body2">{product.description}</Typography>
+            </Box>
+          </Box>
+        </Grid>
+      </Grid>
+
+				VIDEO 180 SLIDESHOW DE LAS IMAGENES
+
+Para agregar el slide de imagenes vamos a usar una libreria externa(react-slideshow-image),la cual no trae integración para typescript,es por esto que la usaremos,para aprender sobre esto.
+Recuerda que estoy con yarn en esta aplicación:
+>yarn add react-slideshow-image
+Tmb pide importar los estilos
+
+Y dado que pudiera ser que reusemos este slider lo mejor es centralizarlo en un componente propio.
+Tras importar la libreria vemos que no puedo instalar los types,ya que no los han subido.
+
+TIP PARA CREAR LOS TYPES PARA UN PAQUETE-LIBRERIA EN PARTICULAR:
+
+Tengo que crear este file 'types/react-slideshow-image/index.d.ts'),(ojo que son dos directorios y el file).Fijate que si me faltaran los types para express sería types/express/index.d.ts,es decir es types/{library}/index.d.ts
+
+Asi pues creo el file types/react-slideshow-image/index.d.ts y pego el codigo que ellos proporcionan.También pego sus estilos en el componente que creamos(aunque los puedo poner de forma global,realmente en el componente tmb me vale)
+Puedo observar que el Slide es responsive y muy bonito.Buena libreria a tener en cuenta para Slides
+
+				VIDEO 181 CONTADOR PARA AGREGAR EL CARRITO
+
+Obviamente necesitamos un selector limitado con unas mínimas validaciones.Va ser algo sencillo realmente(dos iconos y el number en el medio y todo en flex):
+
+export const ItemCounter: FC<Props> = () => {
+  return (
+    <Box display="flex" alignItems="center">
+      <IconButton>
+        <RemoveCircleOutline />
+      </IconButton>
+      <Typography sx={{width:40,textAlign:'center'}}>1</Typography>
+      <IconButton>
+        <AddCircleOutline />
+      </IconButton>
+    </Box>
+
+Fijate que cada producto tiene sólo ciertas tallas disponibles.Esto es algo que sucederá en un e-commerce real y que abordaremos en nada.
+Recuerda también que siempre debo crear folders en cuanto lo necesite.
+
+					VIDEO 182 SELECTOR DE TALLAS
+
+De nuevo tengo que preguntarme si voy a reutilizar el selector de tallas en otro punto de la app.Ya que lo más problable es que no,lo pondré en components/products
+Realmente lo único que ha hecho es crear un arreglo de botones con las tallas.Fijate que necesito la talla seleccionada y el arreglo de tallas disponibles para cada producto.Interesante:
+
+interface Props {
+  selectedSize?: ValidSize;
+  sizes: ValidSize[];
+}
+export const SizeSelector: FC<Props> = ({ selectedSize, sizes }) => {
+  return (
+    <Box>
+      {sizes.map((size) => (
+        <Button
+          key={size}
+          size="small"
+          color={size === selectedSize ? 'primary' : 'info'}
+        >
+          {size}
+        </Button>
+      ))}
+    </Box>
+  );
+};
+
+A la hora de llamarlo lo llamaré asi:
+   <SizeSelector
+     sizes={product.sizes}
+      />
+Fijate que yo no debería inferir la talla del producto,ya que es muy fácil que alguien cometa errores.Lo mejor sería no inferirla y poner un bloqueo de que se debe seleccionar una talla,etc...
+
+				VIDEO 183 PAGINA PARA CARRITO DE COMPRAS VACIO
+
+Si el usuario intenta ir al carrito de compras sin ningun artículo no tiene sentido que se le redireccione.Asi pues vamos a crear un 404 pero para el carrito(en /pages/cart/empty.tsx
+IMPORTANTE: fijate que cuando el usuario vaya a esta página si que quiero que haga un barrido de los NextLink:
+
+  <RemoveShoppingCartOutlined sx={{ fontSize: 100 }} />
+        <Box display="flex" flexDirection="column" alignItems="center">
+          <Typography>{t('cartEmptyDesc')}</Typography>
+          <NextLink href="/" passHref prefetch>
+            <Link typography="h4" color="secondary">{t('cartEmptyReturn')}</Link>
+          </NextLink>
+        </Box>
+Para de esta forma tener cacheado a donde va a ir al volver.Muy pro.Fijate tmb como al Link de material le pase la typography en vez de anidarla dentro.
+
+			VIDEO 184 PAGINA PARA UN CARRITO DE COMPRAS CON ARTICULOS
+
+Ahora si,creo el file /pages/cart/index.tsx para la url /cart.Será un flex a dos columnas(7 y 5) y dos filas en xs.En la izda la CardList,en la dcha la Order:
+
+ner>
+        <Grid item xs={12} sm={7}>
+          <CartList />
+        </Grid>
+        <Grid item xs={12} sm={5}>
+          <Card className="summary-card">
+            <CardContent>
+              <Typography variant="h2">{t('cartPageOrder')}</Typography>
+              <Divider sx={{ my: 1 }} />
+              {/* Order Summary */}
+              <Box sx={{ mt: 3 }}>
+                <Button color="secondary" className="circular-btn" fullWidth>
+                  Checkout
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+					VIDEO 185/6 MOSTRAR LOS PRODUCTOS - ORDER LIST
+
+De nuevo usamos un flex de 3 + 7 + 2 para la columna izqda.Para la parte derecha
+TIP: recuerda que <Grid container> y <Grid container={true}> es lo mismo.Esto lo veré tantas veces que me aburriré:
+ <Grid item xs={3} > <- lo mismo que <Grid item={true} >
+
+				VIDEO 187 FORMULARIO DE DIRECCION DEL CLIENTE
+
+Para el formulario vamos a usar react-hook-forms(aunque Formik era otra gran idea).Fijate que fácil es hacer formularios con Material.Debería dejar esta aplicación como referencia,entre esta y la mía deberia tener suficiente:
+
+ <Grid item xs={12} sm={6}>
+    <FormControl fullWidth >
+      <Select variant="filled" label="Pais" value={1}>
+         <MenuItem value={1}>Argentina</MenuItem>
+ 		 <MenuItem value={2}>Honduras</MenuItem>
+ 		 <MenuItem value={3}>El Salvador</MenuItem>
+ 		 <MenuItem value={4}>México</MenuItem>
+      </Select>
+    </FormControl>
+ </Grid>
+
+				VIDEO 188 RESUMEN DE LA ORDEN
+
+Siguiendo el curso,hacemos el HTML para las pages que vayan surgiendo.Fijate el componente <Chip label="xxx" icon="xxx" color="success" que buena pinta tiene
+
+				VIDEO 190 HISTORIAL DE ORDENES
+
+NOTA: para trabajar con el siguiente componente vamos a instalar:
+>yarn add @mui/x-data-grid
+Es una tabla que permite paginación,exportaciones,etc.Habrá que "masajear" la data desde el backend para que la devuelva tal como la quiere el front(aunque tmb puede transformarla el front).
+La table,que es el <DataGrid> trae unos atributos obligatorios,como son rows,columns,pageSize,rowsPerPageOptions,etc.Fijate que esto será común a cualquier libreria para tablas,incluso la de Amiga.
+
+    <Grid container>
+      <Grid item xs={12} sx={{height:650, width: '100%'}}>
+        <DataGrid 
+          rows={rows}
+          columns={columns}
+          pageSize={10}
+          rowsPerPageOptions={[10, 20, 50, 100]}
+        />
+      </Grid>
+    </Grid>
+
+En cuanto a la data tengo que proporcionar tanto las columnas como la data para las filas.Ya me proporcionan ellos la interfaz GridColDef[] para las columnas:
+
+const columns: GridColDef[] = [
+  { field: 'id', headerName: 'ID', width: 100 },
+  { field: 'fullname', headerName: 'Nombre Completo', width: 300,sortable:true },
+];
+
+const rows = [{ id: 1, fullname: 'Fernando Herrera' }];
+
+Fijate que si creo dos columnas tendré que pasarle dos filas,etc.Y fijate que tienen muchisimas propiedades como minWidth,filterable,sortable,span... 
+
+De echo,una de las más interesantes es la propiedad renderCell,la cual es una funcion que recibe/accede a los parametros(de toda la tabla??) y en base a ellos puedo retornar Labels,Chips.Algo que se usa mucho.Fijate en el parecido con react-table:
+
+{
+  field: 'paid',
+  headerName: t('historyPagePaid'),
+  description: t('historyPagePaidDesc'),
+  width: 200,
+  renderCell: (params: GridValueGetterParams) => {
+    return params.row.paid 
+      ? <Chip color="success" label={t('historyPagePaid')} variant="outlined" />
+      : <Chip color="error" label={t('historyPageNoPaid')} variant="outlined" />
+  },
+},
+
+En este caso es otra columna,con el name de 'paid' que devolverá un Chip con un color según el boleano 'paid'.
+Y fijate tmb como algunas columnas tendrá sentido que no puedan ser ordenadas,como esta con enlaces a la order:
+    {
+      field: 'link',
+      headerName: t('historyPageLink'),
+      description: t('historyPageLinkDesc'),
+      align: 'center',
+      headerAlign: 'center',
+      sortable:false,
+      width: 200,
+      renderCell: (params: GridValueGetterParams) => {
+        return (
+          <NextLink href={`/orders/${params.row.id}`} passHref>
+            <Link>
+              <Chip
+                color="secondary"
+                label={t('historyPageLinkButton') + params.row.id}
+                variant="outlined"
+                sx={{ cursor: 'pointer' }}
+              />
+            </Link>
+          </NextLink>
+        );
+      },
+    },
+Y lo mismo para poder ser seleccionable,etc.Desde luego tiene muy buena pinta la tabla
+
+					AUTH LAYOUT VIDEO 191
+
+Creamos otro Layout para la Auth,fijate que es una simple Box con los items centrados y un Head + title.Logicamente necesita los children.Recuerda que la interface ahora es PropsWithChildren<T>:
+
+interface Props {
+  title: string;
+}
+export const AuthLayout: React.FC<PropsWithChildren<Props>> = ({
+  children,
+  title,
+}) => {
+  return (
+    <>
+      <Head>
+        <title>{title}</title>
+      </Head>
+      <main>
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          height={'calc(100vh - 200px)'}
+        >
+          {children}
+        </Box>
+      </main>
+    </>
+  );
+};
+Despues creo un login y una register-page.En la siguiente sección seguiremos por el back y la DB.
+
+				SECCION 13 DATABASE Y API RESTFULL
+
+En esta sección prepararemos la DB y crearemos varios endpoints.Veremos.
+1- instalar una MongoDB con Docker
+2- Modelo de Producto
+3- API Rest:
+  - Creación de Seed endpoint
+  - Obtener productos
+  - Búsquedas por título y etiquetas
+
+			VIDEO 198 PREPARAR UNA DB LOCAL CON DOCKER Y MONGO
+
+NOTA: aunque mande una DB recuerda que no se va a crear hasta que tenga un documento al menos.
+Para crear el contenedor es bastante sencillo,pero ojo con exited(14) y los wrong permissions en Linux,etc.
+Dejo este proyecto como ejemplo,en un futuro podria tratar de enganchar una IGU.
+
+			VIDEO 199 MONGOOSE Y PRIMER MODELO PARA UN PRODUCTO
+
+Lo primero será instalar mongoose:
+yarn add mongoose
+Fijate que ya estoy en el back cual asinto
+TIPS: unique crea un indice en esa propiedad para que las consultas sean mucho más rápidas en ese campo 
+Fijate que este modelo,aunque sigue siendo bastante básico,tiene un par de enums y algun indice:
+
+import { IProduct } from './../interfaces/products';
+import mongoose, { Schema,model,Model } from 'mongoose';
+
+const productSchema = new Schema({
+  description: { type: String, required: true },
+  images: [{ type: String }],
+  inStock: { type: Number, required: true, default: 0 },
+  price: { type: Number, required: true, default: 0 },
+  sizes: [
+    {
+      type: String,
+      enum: {
+        values: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
+        message: '{VALUE} no es un tamaño válido',
+      },
+    },
+  ],
+  slug: { type: String, required: true, unique: true },
+  tags: [{ type: String }],
+  title: { type: String, required: true },
+  type: {
+    type: String,
+    enum: {
+      values: ['shirts', 'pants', 'hoodies', 'hats'],
+      message: '{VALUE} no es un tipo válido',
+    },
+  },
+  gender: {
+    type: String,
+    enum: {
+      values: ['men', 'women', 'kid', 'unisex'],
+      message: '{VALUE} no es un género válido',
+    },
+  },
+},{
+  timestamps:true,
+  versionKey:false,
+});
+// TODO crear un indice para buscar rápidamente por ese campo/columna
+
+const ProductModel: Model<IProduct> = mongoose.models.ProductModel || model('Product',productSchema)
+export default ProductModel;
+
+				CONEXION A LA DB Y LLENADO INICIAL VIDEO 200
+
+En este punto FH sugiere que cargemos la data inicial llamando a /api/seed.Dado que estoy en Next tengo que crear el file /pages/api/seed.ts lo primero.Fijate que también voy a validar que no se pueda realizar esto en producción(fijate lo importante que es esto!!) y simplemente es llamar al modelo:
+
+type CustomResponse = {
+  message: string;
+};
+
+export default async function (
+  _: NextApiRequest,
+  res: NextApiResponse<CustomResponse>
+) {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(401).json({
+      message: 'No tiene acceso a este servicio',
+    });
+  }
+  await db.connect();
+  await ProductModel.deleteMany();
+  await ProductModel.insertMany(seedDatabase.initialDatai.products);
+  await db.disconnect();
+  res.status(200).json({ message: 'Proceso realizado correctamente!' });
+}
+Recuerda siempre borrar todo antes de cargarlo.Tras realizar la petición comprobar en MongoDB Compass.
+
+				VIDEO 201 OBTENER TODOS LOS PRODUCTOS
+
+Siempre hay que tener en cuenta a la hora de hacer un getAll el tamaño de la respuesta.No tiene sentido devolver todos los productos siendo Amazon,por ejemplo.
+Eventualmente cachearemos las respuestas,más adelante,asi que optimizaremos mucho la app.Perfecto
+
+Vamos pues a crear el endpoint /api/products?gender=xxx que podrá llevar queryParams.Obviamente hay que crear el file /pages/api/products.ts,pero vamos a seguir la estrategia por folders y crear el file /pages/api/products/index.ts
+Fijate que son .ts pues es el back.
+
+IMPORTANTE: debo interiorizar que puedo crear en un mismo type dos opciones posibles.Esto es fundamental cuando quiera devolver un message o unos productos.Necestitaré el operador | para crear un tipo que sea de dos o más posibles formas:
+
+type Response = 
+| { message: string}
+| IProduct[]
+
+TIP: el método lean de mongoose devuelve una respuesta de una forma un poco más eficiente(es recomendable??,investigar):
+
+export default function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) {
+  switch(req.method){
+    case "GET":
+      return getProducts(req,res)
+    default:
+      return res.status(400).json({
+        message: "Bad request"
+      })
+  }
+}
+
+async function getProducts(req: NextApiRequest, res: NextApiResponse<Data>) {
+  await db.connect();
+  const products = await ProductModel.find({}).lean() <- es bueno esto??
+  
+  await db.disconnect();
+  return res.status(200).json(products);
+}
+Fijate como puedo devolver un { message: string } o un Array<IProduct>.Genial.
+IMPORTANTE: dado que los bots para categorizar el SEO penalizan una url con un mongoID(fijate que no debo usarlos) vamos a usar el slug(un campo unique).Filtremos pues ese find,para ello usamos select("field field2 field3 -field4") tras el find
+
+const products = await ProductModel
+  .find()
+  .select("title images inStock price slug -_id")
+  .lean() 
+* Fijate que le pase -_id para quitar el _id,podria pasar -title para quitarlo,etc.Memorizar esto.
+
+				VIDEO 202 APLICAR FILTROS A LA CONSULTA
+
+Queremos mandar un queryParam asi (/api/products?g=men).Fijate que para comprobar que el queryParam es correcto voy a crearme un file de constantes,algo imprescindible,logicamente:
+
+En database/constants.ts:
+
+export const SHOP_CONSTANTS = {
+  validGenders: ['men','women','kid','unisex']
+}
+
+						OBTENER PRODUCTO POR SLUG 203
+
+Tarea:crear el endpoint /api/products/slug.En este punto fijate que las consultas deberian devolver solo los campos necesarios(en este caso todo el producto,pero el getAll anterior solo necesitaba 4 o 5 campos):
+
+type Data = { message: string } | IProduct;
+
+export default function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) {
+  switch (req.method) {
+    case 'GET':
+      return getProductBySlug(res, req);
+    default:
+      return res.status(400).json({ message: 'Bad request' });
+  }
+}
+async function getProductBySlug(
+  res: NextApiResponse<Data>,
+  req: NextApiRequest
+) {
+  await db.connect();
+  const product = await ProductModel
+    .findOne({ slug: req.query['slug'], })
+    .select('-_id')
+    .lean();
+  await db.disconnect();
+  if(!product) {
+    return res.status(404).json({ message: 'Not product found' });
+  }
+  return res.status(200).json(product);
+}
+
+Fijate que voy a quitar el _id,pero puede que sea necesario más adelante.
+Recuerda que validaremos las páginas cada día.
+
+			VIDEO 204 BUSQUEDA DE PRODUCTOS POR TITLE O LABEL
+
+Vamos a crear el endpoint /api/search/XXX donde se introducirá un texto que buscaremos tanto en el title como en las tags.Llegados a este punto,se recomienda crear un indice en esos campos de tipo text para que se acceda más rápido además,de beneficiarse de mejoras que no tendría si busco por $regex y una mejor sintaxis en la query:
+
+productSchema.index( {title:'text',tags:'text'} )
+
+Fijate que en cuanto cree un indice ya no necesito hacer esto:
+
+  const productsFound = await ProductModel
+    // .find({ $or: [{ title: {$regex: query} },{tags: {$regex: query}}]})
+    .find( {$text: {$search: query}})
+    .select('-_id')
+    .lean();
+
+IMPORTANTE: sólo puedo crear un indice de texto por colección,pero dado que puedo agregar los campos que quiera no es muy importante realmente.
+
+Más info: https://www.digitalocean.com/community/tutorials/how-to-perform-full-text-search-in-mongodb
+
+Seguiremos enlazando el front con esta REST.
+
+

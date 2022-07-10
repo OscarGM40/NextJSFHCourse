@@ -1,0 +1,15 @@
+		SECCION 14 HOOK SWR - HOOK RECOMENDADO PARA DATA FETCHING POR NEXT
+
+La propia gente de Next ya creó un hook para data fetching,el cual ayuda con la caché de la información.Me evitará un montón de código.Aprender este hook es el objetivo de la sección.
+Esta sección tiene mucha información de comunicación de ida y vuelta con nuestro servidor, puntualmente veremos sobre:
+
+1- SSR
+2- SSG
+3- ISR
+4- Búsquedas
+5- Diseño responsivo condicional
+6- SWR para realizar peticiones a HTTP
+
+La sección empieza a encaminarse al objetivo de tener una tienda real conectada a una base de datos que cambia y maneja caché.
+
+
