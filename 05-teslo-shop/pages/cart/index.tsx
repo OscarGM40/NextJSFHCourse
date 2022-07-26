@@ -14,7 +14,7 @@ import { ShopLayout } from '../../components/layouts';
 const CartPage = () => {
   
   const { t } = useTranslation('home');
-  
+    
   return (
     <ShopLayout title="Cart -3" pageDescription="Cart Page">
       <Typography variant="h1" component="h1">

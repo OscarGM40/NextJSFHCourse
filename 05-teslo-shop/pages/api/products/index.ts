@@ -21,7 +21,7 @@ export default function handler(
 }
 
 async function getProducts(req: NextApiRequest, res: NextApiResponse<Data>) {
-  // const { gender = 'all' } = req.query;
+  
   let products: Array<IProduct> = [];
 
   await db.connect();

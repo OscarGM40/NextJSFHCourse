@@ -24,13 +24,36 @@ import {
   VpnKeyOutlined,
 } from '@mui/icons-material';
 import useTranslation from 'next-translate/useTranslation';
+import { KeyboardEvent, useContext, useState } from 'react';
+import { UIContext } from '../../context';
+import { useRouter } from 'next/router';
 
 export const SideMenu = () => {
+  const router = useRouter();
   const { t } = useTranslation('home');
+  const {isMenuOpen,toggleSideMenu} = useContext(UIContext);
+  const [searchTerm,setSearchTerm] = useState("")
+
+  const navigateTo = (url:string) => {
+    router.push(url);
+    toggleSideMenu()
+  }
+
+  const onSearchTerm = () => {
+    if(searchTerm.trim().length === 0) return;
+    navigateTo(`/search/${searchTerm}`)
+  }
+
+  const onKeyUpHandler = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      onSearchTerm()
+    }
+}
 
   return (
     <Drawer
-      open={false}
+      open={isMenuOpen}
+      onClose={toggleSideMenu}
       anchor="right"
       sx={{ backdropFilter: 'blur(4px)', transition: 'all 0.5s ease-out' }}
     >
@@ -38,11 +61,17 @@ export const SideMenu = () => {
         <List>
           <ListItem>
             <Input
+              autoFocus
               type="text"
               placeholder="Buscar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyUp={onKeyUpHandler}
               endAdornment={
                 <InputAdornment position="end">
-                  <IconButton aria-label="toggle password visibility">
+                  <IconButton
+                    onClick={onSearchTerm}
+                  >
                     <SearchOutlined />
                   </IconButton>
                 </InputAdornment>
@@ -61,42 +90,54 @@ export const SideMenu = () => {
             <ListItemIcon>
               <ConfirmationNumberOutlined />
             </ListItemIcon>
-            <ListItemText primary={'Mis Ordenes'} />
+            <ListItemText primary={t('sideMenuMyOrders')} />
           </ListItem>
 
-          <ListItem button sx={{ display: { xs: '', sm: 'none' } }}>
+          <ListItem
+            button
+            sx={{ display: { xs: '', sm: 'none' } }}
+            onClick={() => navigateTo('/category/men')}
+          >
             <ListItemIcon>
               <MaleOutlined />
             </ListItemIcon>
-            <ListItemText primary={'Hombres'} />
+            <ListItemText primary={t('navbarMen')} />
           </ListItem>
 
-          <ListItem button sx={{ display: { xs: '', sm: 'none' } }}>
+          <ListItem
+            button
+            sx={{ display: { xs: '', sm: 'none' } }}
+            onClick={() => navigateTo('/category/women')}
+          >
             <ListItemIcon>
               <FemaleOutlined />
             </ListItemIcon>
-            <ListItemText primary={'Mujeres'} />
+            <ListItemText primary={t('navbarWomen')} />
           </ListItem>
 
-          <ListItem button sx={{ display: { xs: '', sm: 'none' } }}>
+          <ListItem
+            button
+            sx={{ display: { xs: '', sm: 'none' } }}
+            onClick={() => navigateTo('/category/kid')}
+          >
             <ListItemIcon>
               <EscalatorWarningOutlined />
             </ListItemIcon>
-            <ListItemText primary={'Niños'} />
+            <ListItemText primary={t('navbarKids')} />
           </ListItem>
 
           <ListItem button>
             <ListItemIcon>
               <VpnKeyOutlined />
             </ListItemIcon>
-            <ListItemText primary={'Ingresar'} />
+            <ListItemText primary={t('sideMenuSignIn')} />
           </ListItem>
 
           <ListItem button>
             <ListItemIcon>
               <LoginOutlined />
             </ListItemIcon>
-            <ListItemText primary={'Salir'} />
+            <ListItemText primary={t('sideMenuGoOut')} />
           </ListItem>
 
           {/* Admin */}
@@ -107,20 +148,20 @@ export const SideMenu = () => {
             <ListItemIcon>
               <CategoryOutlined />
             </ListItemIcon>
-            <ListItemText primary={'Productos'} />
+            <ListItemText primary={t('sideMenuProducts')} />
           </ListItem>
           <ListItem button>
             <ListItemIcon>
               <ConfirmationNumberOutlined />
             </ListItemIcon>
-            <ListItemText primary={'Ordenes'} />
+            <ListItemText primary={t('sideMenuOrders')} />
           </ListItem>
 
           <ListItem button>
             <ListItemIcon>
               <AdminPanelSettings />
             </ListItemIcon>
-            <ListItemText primary={'Usuarios'} />
+            <ListItemText primary={t('sideMenuUsers')} />
           </ListItem>
         </List>
       </Box>

@@ -1,3 +1,5 @@
+import bcrypt from 'bcryptjs';
+
 export interface SeedProduct {
   description: string;
   images: string[];
@@ -16,11 +18,34 @@ export type ValidSize = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL';
 export type ValidType = 'shirts' | 'pants' | 'hoodies' | 'hats';
 export type ValidGender = 'men' | 'women' | 'kid' | 'unisex';
 
+interface SeedUser {
+  name: string;
+  email: string;
+  password: string;
+  role: 'admin' | 'client';
+}
+
 interface SeedData {
+  users: SeedUser[];
   products: SeedProduct[];
 }
 
 export const initialData: SeedData = {
+  users: [
+    {
+      name: 'Oscar Gonzalez',
+      email: 'oscar@gmail.com',
+      // fijate que no necesito generar la salt ya que va a poner una de 10 rounds por defecto,asi que directamente llamo a hashSync
+      password: bcrypt.hashSync('13456'),
+      role: 'admin',
+    },
+    {
+      name: 'Asinto Benavente',
+      email: 'asinto@gmail.com',
+      password: bcrypt.hashSync('13456'),
+      role: 'client',
+    },
+  ],
   products: [
     {
       description:

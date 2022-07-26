@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { db, seedDatabase } from '../../database';
-import { ProductModel } from '../../models';
+import { ProductModel, UserModel } from '../../models';
 
 type CustomResponse = {
   message: string;
@@ -18,6 +18,8 @@ export default async function (
   await db.connect();
   await ProductModel.deleteMany();
   await ProductModel.insertMany(seedDatabase.initialData.products);
+  await UserModel.deleteMany()
+  await UserModel.insertMany(seedDatabase.initialData.users)
   await db.disconnect();
   res.status(200).json({ message: 'Proceso realizado correctamente!' });
 }

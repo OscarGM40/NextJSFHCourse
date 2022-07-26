@@ -1,5 +1,5 @@
 # Next.js Teslo E-Commerce App
-Para ejecutar la app localmente se necesita la base de datos. Para ello se debe ejecutar el siguiente comando(dejo la db en el 27021):
+Para ejecutar la app localmente se necesita la base de datos(de momento es un contenedor Docker con la imagen de MongoDB v5). Para ello se debe ejecutar el siguiente comando(dejo la db en el 27021):
 ```
 docker-compose up -d
 ```
@@ -11,8 +11,12 @@ LLamar al url por GET:
 ```
 http://localhost:3000/api/seed
 ```
+### Hay que crear el .env con la MongoURI
 
-## Para crear una db con una imagen de mongoDB puedo crear un file llamado init-mongo.js con esto:
+```
+MONGO_URL=mongodb://root:root@localhost:27021/teslodb
+```
+## Para crear una db con un user y pass con roles y accesos restringidos puedo crear un file llamado init-mongo.js con esto(el cual hay que pasar luego en el yaml):
 
 ```
 db.createUser({
@@ -27,7 +31,7 @@ db.createUser({
 })
 ```
 
-### El docker-compose.yaml lucirá asi(fijate que el file debe coincidir en la parte de los volumenes y en el uso de un volumen unnamed local ya que no tengo permisos suficientes en el SSD.Exited(14)):
+### El docker-compose.yaml lucirá asi(fijate que el file anterior debe ser provisto a ese punto de entrada.Tuve que usar un unnamed volume(/mongo) para persistir :data/db en mi SO ya que no tengo permisos suficientes en el SSD.Exited(14) es falta de permisos):
 ```
 version: "3"
 
@@ -63,3 +67,4 @@ mongo -u<username> -p <password> --authenticationDatabase <database> OJO con los
 ```
 mongodb://<username>:<password>@127.0.0.1:27017/<database> <- de nuevo ojo con el puerto que va hardcodeado
 ```
+

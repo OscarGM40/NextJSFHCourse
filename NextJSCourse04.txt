@@ -12,4 +12,569 @@ Esta sección tiene mucha información de comunicación de ida y vuelta con nues
 
 La sección empieza a encaminarse al objetivo de tener una tienda real conectada a una base de datos que cambia y maneja caché.
 
+			VIDEO 215 SWT - HOOK PARA DATA FETCHING
+
+'swr'(stale-while-revalidate) es un customHook/library altamente recomendado para fetchear data desde el cliente.Es muy parecido a axios,pero es un customHook que viene ya preparado que retorna la data,el error,el loading,...
+No sólo esto,sino que se puede programar para que haga otro fetch cada minuto,cada hora,cada dia,etc y realizará otra petición 
+
+Es pequeño,ligero,reusable,soporta Typescript y React Native, además de SSR,ISR o SSG.Tiene una cache built-in y request deduplication
+
+Bien,lo primero es instalarlo:
+>yarn add swr | npm i swr
+
+Más info aqui: https://nextjs.org/docs/basic-features/data-fetching/client-side#client-side-data-fetching-with-swr
+
+NOTA: puedo ver como este hook devuelve un 304(Not Modified) cuando se realice una petición que devuelve la misma data,evitando la llamada.Superinteresante.
+
+Y no sólo esto,sino que puedo pasarle un interval a la función fetcher(y además,si no cambia la data,de nuevo se sirve con un 304 desde una cache,aunque si se hace la petición):
+
+  const {data,error} = useSWR('/api/products',fetcher,{
+    refreshInterval:2000
+  });
+
+Desde luego esta libreria es genial.Por último,fijate en la sintaxis:
+const { data, error, isValidating, mutate } = useSWR(key,fetcher,options).
+
+			VIDEO 216 CUSTOM HOOKS Y CONFIGURACIÓN GLOBAL SWR
+
+Hay una configuración global que se puede implementar mediante un provider(<SWRConfig value={options}> <Component /> </SWRConfig>) para pasar una misma config a  nivel global a todos los hooks SWR.
+Esta configuración tiene menos prioridad que la local,asi que es sobreescribible(como la libreria toast,el local siempre pisa a la global).
+
+Bien,creemonos nuestro customHook pues:
+
+import useSWR, { SWRConfiguration } from "swr";
+
+const fetcher = (...args: [key:string]) => fetch(...args).then(res => res.json());
+
+export const useProducts = (url:string,config: SWRConfiguration = {}) => {
+    const { data, error } = useSWR<IProduct[]>(`/api/${url}`, fetcher,config);
+
+    return {
+      products: data || [],
+      isLoading: !error && !data,
+      isError: error
+    }
+
+}
+NOTA: el hook SWT también tiene la feature que en el destroy del componente limpia los intervalos que pudiera tener.No hace falta que haga yo nada.Desde luego,esta libreria parece muy buena.
+  
+IMPORTANTE: puedo quitar el fetcher y pasarle esa GlobalConfig con uno por las opciones:
+
+function MyApp({ Component, pageProps }: AppProps) {
+  return (
+    <SWRConfig value={{
+      fetcher: (resource,init) => fetch(resource,init).then(res => res.json())
+    }}>
+
+    <ThemeProvider theme={lightTheme}>
+      <CssBaseline />
+      <Component {...pageProps} />;
+    </ThemeProvider>
+    </SWRConfig>
+  );
+}
+TIP: esta libreria es muy potente,pues permite schedulizar peticiones,pasarle el fetcher que quiera,cachear las responses,etc.Lamentablemente necesita Node 16,pues es bastante moderna.
+
+FAltaria crear un componente para el loading(usaremos un <CircularProgress /> y tmb al cargar las imagenes hay un punto en el tiempo que solo se ven los footers de las cards porque las imagenes no han cargado y queda bastante feo.
+
+FH va a hacer algo rápido,creando un estado en ProductCard(en cada card):
+  const [isImageLoaded, setIsImageLoaded] = useState(false)
+Recuerda que <CardMedia> me deja acceder al onLoad entre otras cosas bellas:
+ <CardMedia
+    component="img"
+    className="fadeIn"
+    image={productImage}
+    alt={product.title}
+    onLoad={() => setIsImageLoaded(true)}
+  />
+Y simplemente oculto el footer con la desc y el price
+  <Box sx={{ mt: 1, display: isImageLoaded ? 'block' : 'none' }} className="fadeIn">
+        <Typography fontWeight={700}>{product.title}</Typography>
+        <Typography fontWeight={500}>{`$${product.price}`}</Typography>
+      </Box>
+
+Fijate que fácil es meter un ternario para los estilos con material y la prop sx.
+De echo con el fadeIn queda bastante bonito
+
+			PANTALLA DE PRODUCTOS PARA HOMBRES | MUJERES | NIÑOS
+
+Fijate como simplemente habia que poner una / para cambiar la ruta de relativa a absoluta.¿Para que trabajar con rutas relativas,lo primero?Acuerdate de empezar las rutas con /.
+
+
+const ProductByGenderPage = () => {
+
+  const router = useRouter();
+
+  const { t } = useTranslation('home');
+
+  const gender = (router.query.gender as string) ?? '';
+
+  useEffect(() => {
+    if (!SHOP_CONSTANTS.validGenders.includes(gender)) {
+      router.push('/404');
+    }
+  }, [gender]);
+
+  const { products, isLoading } = useProducts(`/products?gender=${gender}`);
+
+const genderCapitalized = gender.charAt(0).toLocaleUpperCase() + gender.slice(1);
+
+  return (
+    <ShopLayout
+      title={`Teslo-Shop - ${genderCapitalized}`}
+      pageDescription={t('pageDescription') + ' - ${genderCapitalized}'}
+    >
+      <Typography variant="h1">
+        {t('pageTitle') + ` - ${genderCapitalized}`}
+      </Typography>
+
+      <Typography variant="h2" sx={{ mb: 1 }}>
+        {t('pageSubtitleWithCountry', { gender })}
+      </Typography>
+
+      {isLoading ? <FullScreenLoading /> : <ProductList products={products} />}
+
+    </ShopLayout>
+
+  );
+
+};
+
+export default ProductByGenderPage;
+
+Fijate que las rutas ya estaban echas en la Navbar,pero aún falta poner el botón con una decoración distinta cuando hace match el link con la ruta actual.
+Para ello nos valdrá el useRouter y cambiar el color del botón si hace match la ruta:
+
+const { asPath } = useRouter();
+
+const activeLink = (href: string) => (href === asPath ? 'primary' : 'info');
+
+<Button color={activeLink('/category/men')}> {t('navbarMen')} </Button>
+
+				VIDEO 221 UICONTEXT
+
+Queremos mostrar el menu al pulsar en el botón.Trataremos esto de forma global,asi que usaremos un Contexto.
+De momento solo tendrá la prop isMenuOpen(recuerda usar los atajos,que son muy útiles).
+
+
+De momento solo tendrá la prop isMenuOpen(recuerda usar los atajos,que son muy útiles).
+
+NOTA: el propio Dan Abramovich recomienda no usar Redux,sino usar react-query | swr | cualquier otra libreria que guarde estados globales y si es necesario usar la APIContext.
+TIP: useEffect siempre se llama despues de que se haya renderizado el componente,para asi poder acceder al DOM(esto es importante).Puedo ver la escala de urgencia como useMemo > useLayoutEffect > useEffect siendo el último éste.
+
+NOTA: puedo observar que en modo dev hay ciertas ralentizaciones,como al navegar.Esto no se dará en producción en una app de Next.
+
+La tarea era muy simple,era llamar al context,etc:
+    <Drawer
+      open={isMenuOpen}
+      onClose={toggleSideMenu}
+      anchor="right"
+      sx={{ backdropFilter: 'blur(4px)', transition: 'all 0.5s ease-out' }}
+    >
+			VIDEO 222 PANTALLA DE UN PRODUCTO
+
+De momento estamos navegando a /product/slug en duro.Simplemente meto el file como una ruta dinámica con corchetes.Recuerda que tenemos ya un endpoint que busca un producto por slug(lo tengo en router.query.slug)
+NOTA: la primera renderización el router.query.slug es undefined.Hasta que no se redibuje una vez no tendrá valor(aunque ocurre inmediatamente hay un punto que es undefined)
+
+Además,puedo ver que hay problemas por haber usado tipado en el customHook:
+useSWR<IProduct[]>
+
+Lo ideal sería hacerlo abstracto,y que reciba un genérico tipo T,y no acoplarlo.
+export const useProducts = <T>(args) => {
+  return useSWR<T>(...)
+}
+Sin embargo,no vamos a hacerlo asi(pues parecia buena idea)
+
+			VIDEO 223 GET-SERVER-SIDE-PROPS -FETCH DEL PRODUCTO EN EL BACK
+
+NOTA: usar .lean() en una consulta de Mongo es altamente recomendable,ya que va a reducir el peso de lo que trae,mejorando la performance(aunque pierdo acceso a varios métodos,el 95% de las veces es mejor usar lean).Muy útil.
+Bien,de momento vamos a usar SSR para acceder a la db en el server:
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const product = await dbProducts.getProductBySlug((ctx.query.slug as string) ?? "") 
+// fijate que es importante comprobar y redirigir
+  if(!product) {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false  // con false los bots de google no indexarán la aplicación
+      }
+    }
+  }
+  
+  return {
+    props: {
+     product 
+    }
+  }
+}
+Recuerda que el objetivo de Next es devolver el mayor número de páginas estáticas posibles,y esta función las hará dinámicas.Cambiaremos esto,es una solución temporal.
+
+				VIDEO 226 GET STATIC PATHS Y GET STATIC PROPS
+
+Vamos a cambiar la forma implementada anterior(former implemented way) por motivos obvios.Realmente estas pantallas pueden ser servidas mediante SSG (o incluso mejor con ISG,recacheando cada 24h,etc... )
+
+Recuerda también que puedo dejar el proceso abierto pasando fallback: 'blocking' ,asi,futuras peticiones meterán en la cache de forma estáticas esa page(recuerda la API de Pokemon que solo cacheamos 300 pero terminaría cacheando todos):
+
+export const getStaticPaths: GetStaticPaths = async (ctx) => {
+  const paths = await dbProducts.getAllProductsSlugs();
+// si la ruta es /:slug tengo que pasar {params:{slug: value}} por cada una
+  return {
+    paths: paths.map(path => ({params: {slug: path.slug}})),
+    fallback: "blocking"
+  }
+}
+
+export const getStaticProps: GetStaticProps = async (ctx) => {
+  const { slug } = ctx.params as { slug: string}
+  const product = await dbProducts.getProductBySlug(slug);
+  
+  if (!product) {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false, // con false los bots de google no indexarán la aplicación
+      },
+    };
+  }
+
+  return {
+    props: {
+      product,
+    },
+    revalidate:60*60*24
+  };
+}
+
+IMPORTANTE: fijate que simplemente hicimos una busqueda de todo y seleccionamos el slug( Product.find().select("slug -_id").lean().Lamentablemente Mongo siempre devuelve por defecto el _id asi que hay que quitarlo:
+
+export const getAllProductsSlugs = async():Promise<Array<{slug:string}>> => {
+  await db.connect();
+  const slugs = await ProductModel.find()
+  .select('slug -_id')
+  .lean()
+  await db.disconnect();
+  // retorna esto [{slug:''}]
+  return slugs;
+}
+Al hacer el build la diferencia entre el circulo vacio y lleno es que unas usaron Static por defecto(sin llamar a getStaticProps) y las que tienen el circulo lleno han sido forzadas mediante el método.
+
+Tras hacer un yarn build puedo hacer un yarn start y ver mediante un pequeño servidor de desarrollo como va la performance(no tomar en cuenta yarn dev para esto nunca).
+
+					VIDEO 228 PAGINA DE BUSQUEDAS
+
+Queremos que se muestre un input al buscar en la lupa(pero ademas dependiendo de la resolucion,si no hay hueco abrimos el menu)
+
+Lo primero será crearse un useState para rescatar el input:
+ const [searchTerm,setSearchTerm] = useState("")
+
+Despues creamos una func helper para navegar a esa ruta:
+ const onSearchTerm = () => {
+    if(searchTerm.trim().length === 0) return;
+    navigateTo(`/search/${searchTerm}`)
+  }
+
+Si bien podria parecer que lo mejor es mandar el term y rescatarlo con el router,lo mejor es usar SSR para hacer pre-fetch.Desde luego Next parece la ostia
+
+		VIDEO 229 REALIZAR LA BUSQUEDA DEL TERM MEDIANTE SSR
+
+De nuevo,no tiene sentido llamar a un endpoint del back cuando puedo acceder a la db directamente.Fijate que FH recomienda serializar con JSON.parse cuando no quiera el ObjectId o tenga alguna función en la db:
+
+export const getProductsByTerm = async (
+  term: string
+): Promise<Array<IProduct>> => {
+  await db.connect();
+  
+  const products = await ProductModel
+  .find({$text: { $search: term}})
+  .select('title images price inStock slug -_id')
+  .lean();
+
+  await db.disconnect();
+  return products;
+};
+
+			VIDEO 230 MEJORAR LA PAGINA DE BUSQUEDA
+
+Si no regresamos nada perdemos la oportunidad de que el cliente vea algun producto(fijate la importancia de esto en un e-commerce).Se puede solucionar devolviendo todos los productos si no se encontró ninguno con el término de busqueda.
+
+  let products = await getProductsByTerm(query);
+  const foundProducts = products.length > 0;
+
+  if (!foundProducts) {
+    products = await getAllProducts();
+  }
+
+			VIDEO 232 MOSTRAR/OCULTAR TEXTO BUSQUEDA EN DESKTOP	
+
+Seguir el video ya que son muchas condiciones.
+
+			SECCION 15 CARRITO DE COMPRAS
+
+Esta sección está dedicada enteramente al manejo del carrito de compras... tenemos que controlar las cantidades, productos, eliminaciones, valores a pagar y demás.
+
+Adicionalmente tendremos muchas tareas que irán poco a poco ayudándolos a reforzar React.La parte del checkout del cart vendrá en la siguiente sección ya que necesitaremos autenticación.
+
+				VIDEO 238 CART CONTEXT E INTERFACES
+
+ Dado que vamos a crear un CartContext lo primero será saber como luce un cart.Obviamente no necesito la descripcion,tags u otras propiedades y necesito una extra para la cantidad:
+
+import { ValidGender, ValidSize } from '../database/products';
+
+export interface ICartProduct {
+  _id: string;
+  image: string;
+  price: number;
+  size: ValidSize;
+  slug: string;
+  title: string;
+  gender: ValidGender;
+  quantity: number;
+}
+
+				VIDEO 239 PRODUCTO NO DISPONIBLE
+
+Si no tenemos stock de un producto queremos que cambie el botón de agregar al carrito,además de poner en la foto algun tipo de feedback al usuario.
+Un simple <Chip /> nos valdrá:
+ {product.inStock === 0 && (
+  <Chip
+    color="primary"
+    label={t('notAvailable')}
+    sx={{ position: 'absolute', top: 10, left: 10, zIndex: 99 }}
+      />
+   )}
+TIP: si bien podría cambiar el display con css condicionalmente,es aún más eficiente usar React y no mostrar directamente este JSX.Esto es muy importante,ya que la performance sube.
+
+			VIDEO 240 VALIDAR QUE EL USUARIO SELECCIONA UNA TALLA
+
+ TIP: fijate el tipado de un setter mandado al hijo(cualquiera de los dos vale):
+
+  // onSelectedSize: Dispatch<SetStateAction<ValidSize | undefined>>;
+  onSelectedSize: (size:ValidSize) => void;
+
+export const SizeSelector: FC<Props> = ({ selectedSize, sizes,onSelectedSize }) => {
+  return (
+    <Box>
+      {sizes.map((size) => (
+        <Button
+          key={size}
+          size="small"
+          color={size === selectedSize ? 'primary' : 'info'}
+          onClick={() => onSelectedSize(size)}
+        >
+          {size}
+        </Button>
+      ))}
+    </Box>
+
+Lo mismo para el ItemCounter,lo mejor es mandarle una funcion y que el hijo la ejecute e informe al padre.
+
+			VIDEO 243-244 AGREGAR AL CARRITO LA ORDEN DE COMPRA
+
+TIP: recuerda ver como desarrollan mis compañeros.
+Fijate que era aun más fácil coger las dos condiciones juntas y evitarse un paso:
+
+  const addProductToCart = (product: ICartProduct) => {
+    // buscar los productos iguales
+    const sameProducts = state.cart.filter((p) => p._id === product._id);
+    // buscar los que tengan la misma talla
+    if (sameProducts.length > 0) {
+      const sameSize = sameProducts.filter((p) => p.size === product.size);
+      if (sameSize.length > 0) {
+        const finalProduct: ICartProduct = {
+          ...sameSize[0],
+          quantity: sameSize[0].quantity + product.quantity,
+        };
+        dispatch({
+          type: '[Cart] - Update Cart',
+          payload: [
+            ...state.cart.filter((p) => p.size !== sameSize[0].size),
+            finalProduct,
+          ],
+        });
+      } else {
+        dispatch({
+          type: '[Cart] - Update Cart',
+          payload: [...state.cart, product],
+        });
+      }
+    } else {
+      dispatch({
+        type: '[Cart] - Update Cart',
+        payload: [...state.cart, product],
+      });
+    }
+  };
+
+Fijate que con findIndex me ahorraba bastante código:
+   let cartCopy = [...state.cart]
+
+    const sameProductWithSameSize = state.cart.findIndex( ({size,_id}) => _id === product._id && size === product.size);
+    if (sameProductWithSameSize >= 0) {
+      cartCopy[sameProductWithSameSize].quantity += product.quantity
+    }else{
+      cartCopy = [...cartCopy,product]
+    }
+    dispatch({
+      type: "[Cart] - Update Cart",
+      payload: cartCopy
+    })
+
+Sea como sea era bastante sencillo.
+
+			VIDEO 246 ALMACENAR EL CARRITO EN LAS COOKIES
+
+La diferencia entre el localStorage y las cookies es que cuando realice una petición al back las cookies viajan automáticamente al servidor(en request time).Es por ello que elegimos las cookies.
+NOTA: tanto las cookies como el localStorage es manipulable por el usuario,luego hay que tener mucho cuidado porque podrian falsear el precio.Lo que haremos es fijarnos en otras propiedades que no puedan ser manipulables
+
+Obviamente para grabar y leer en las cookies vamos a usar una libreria:
+>yarn add js-cookie
+Esta libreria es ligera y no tiene peer-dependencies
+
+Dado que puedo usar un efecto en el Provider pues estoy en React,puedo pasarle como dependencia el cart(fijate que le paso una parte concreta) y cada vez que cambie re-establezco la cookie llamada cart.
+
+useEffect(() => {
+  Cookie.set('cart',JSON.stringify(state.cart));
+},[state.cart])
+
+Recuerda que este efecto se va a disparar una vez siempre,ya que la propiedad existe,y otra adicional por cada cambio,pero se va a disparar una vez en cuanto cargue el componente(recuerda lo de Dani)
+
+IMPORTANTE: si miro la cookie en las DevTools veré esto:
+[{%22_id%22:%2262c9913f987d63b714d85fb6%22%2C%22image%22:%221740280-00-A_0_2000.jpg%22%2C%22price%22:45%2C%22size%22:%22XS%22%2C%22slug%22:%22men_turbine_long_sleeve_tee%22%2C%22title%22:%22Men's%20Turbine%20Long%20Sleeve%20Tee%22%2C%22gender%22:%22men%22%2C%22quantity%22:1}]
+
+Y crearemos otro efecto para cargar la cookie tras refrescar:
+  useEffect(() => {
+    const oldCart =
+      Cookie.get('cart') != undefined ? JSON.parse(Cookie.get('cart')!) : [];
+    dispatch({
+      type: '[Cart] - LoadCart from cookies | storage',
+      payload: oldCart,
+    });
+  }, []);
+
+			VIDEO 247 MOSTRAR PRODUCTOS EN LA CART PAGE
+
+Simplemente traer al CartList el Context( const { cart } = useContext(CartContext);).En el siguiente video hay que crear la funcionalidad del ItemCounter
+
+				VIDEO 248 FUNCIONALIDAD ITEM COUNTER
+
+Al loro con el error de Hidratation,se soluciona poniendo un state y un efecto en ese componene que da el fallo(cambiando de false a true:
+
+const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+Despues ya si uso hasMounted && xxx.map()
+
+NOTA: fijate como puedo negar la agrupacion de dos condiciones para eliminar el producto cuando sea el mismo id y la misma talla y dejar el resto:
+cart: state.cart.filter( p => !(p._id === action.payload._id && p.size === action.payload.size)).Recuerda que puedo agrupar algo y despues negarlo.Muy pro.
+
+IMPORTANTE: por último,fijate que al eliminar y refrescar se sigue manteniendo el estado del cart.Esto es por este efecto:
+useEffect(() => {
+    Cookie.set('cart', JSON.stringify(state.cart));
+  }, [state.cart]);
+Fijate que como dependencia tiene el cart,asi que eliminar lo disparará también.React recomienda este tipo de efectos,que hagan una sola cosa pero la hagan bien.
+
+			VIDEO 250 CALCULAR ORDEN DE COMPRA EN EL FRONT
+
+Para calcular esto vamos a crear otro efecto con la dependencia del cart.Nuevamente el equipo de React recomienda que cada efecto se encargue sólo de una tarea,asi que no vamos a juntar la lógica con el ya existente.
+Para calcular el numero de items del cart fijate que un reduce va muy bien.Memorizo que un reduce lleva como args el valor previo y el valor actual,además de un valor inicial.Además,puedo usar un reduce sobre un objeto pero devolver un number:
+
+numberOfItems: state.cart.reduce((prev,curr) => curr.quantity + prev, 0) <- empiezo en 0 y acumulo la quantity.Fijate como devolveré un number,pero hago el reduce sobre un objeto(devolveré solo el acumulatorio de una propiedad de tipo number.
+
+Y para la suma realmente me vale otro reduce,pero multiplicando por el price:
+subTotal: state.cart.reduce((prev,curr) => (curr.quantity * curr.price) + prev,0)
+
+Para el IVA,vamos a usar una variable de entorno.Recuerda que son strings y pueden ser undefined,y además si es para el front hay que añadir NEXT_PUBLIC
+  const taxRate = Number(process.env.NEXT_PUBLIC_TAX_RATE ?? 0);
+Al final el efecto queda asi:
+  useEffect(() => {
+    const numberOfItems = state.cart.reduce((prev,curr) => curr.quantity + prev,0)
+    const subTotal = state.cart.reduce((prev,curr) => (curr.quantity * curr.price)+ prev,0)
+    const taxRate = Number(process.env.NEXT_PUBLIC_TAX_RATE ?? 0);
+    
+    const orderSummary = {
+      numberOfItems,
+      subTotal,
+      tax: subTotal * taxRate,
+      total: subTotal + (subTotal * taxRate),
+    };
+    dispatch({type:'[Cart] - Update order summary',payload:orderSummary})
+  }, [state.cart]);
+
+			VIDEO 251 MOSTRAR MONTOS EN LA UI DE LA ORDEN
+
+Dado que estamos trabajando con currencies,usaremos la API Intl.PAra acceder a las propiedades simplemente las compartimos en el CartContext tmb
+Bien,realmente devolver un precio como el entero 530 no queda nada bien.Hay que formatear los numeros a currencies.Si bien hay paquetes de terceros la API Intl va perfectamente(recuerda que tengo vision sobre ella,es como el fetch)
+
+export const format = (value: number) => {
+  const formatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimunFractionDigits:2,
+    maximumFractionDigits:2,
+  });  <- esto devuelve un string,aun falta pasarle el .format()
+ return formatter.format(value) <- esto devolverá $2,500,00
+Mirar que más le puso Dani. 
+Fijate que los alemanes usan . y , al reves que los US
+log("en-US");
+// expected output: 5/24/2012 26,254.39
+
+log("de-DE");
+// expected output: 24.5.2012 26.254,39
+
+
+		SECCION 16 AUTENTICACION PERSONALIZADA + NEXT AUTH
+
+Crearemos dos autenticaciones,primero la nuestra y despues mediante NextAuth.
+NOTA:  Axios tiene habilitado el envio automático de cookies en cada petición,pero al usar la API fetch tengo que mandarlas manualmente.Es por esto que JWT por las cookies + Axios es una gran elección,porque axios mandará las cookies sólo,y en ellas irá el token.
+
+En esta sección veremos:
+1- Autenticacicón personalizada
+2- JWT - Json Web Tokens
+3- Creación de usuarios
+4- Encriptación de contraseñas
+5- Hash de contraseñas
+6- REST:
+  - Login
+  - Register
+  - Verificar Token
+7- Conexión con el Backend y Frontend
+8- React Hook Forms
+9- Auth Context
+
+Y más
+
+Es una sección importante, especialmente si desean trabajar con una autenticación personalizada.
+
+				VIDEO 257 MODELO DE UN USUARIO
+
+Crearemos un modelo con las propiedades name(username),email,password y role.fijate como role es una enum:
+
+role: {
+  type: String,
+  enum: {
+    values: ['admin','client'],
+    message: '{VALUE} no es un role válido',
+    default: 'client',
+    required: true
+
+const UserModel:Model<IUser> = mongoose.models.User || model('User',userSchema)
+export default UserModel;
+
+NOTA: el proyecto tarda mucho en levantar por las named exports:
+
+import { Box, Grid} from '@mui/material';
+
+El problema es que el compilador está importando todos los paquetes dentro de la carpeta material.
+
+Entonces... Importando de esta manera
+
+import Box from '@mui/material/Box'
+import Grid from '@mui/material/Grid'
+
+para encriptar la password instalamos bcryptjs:
+yarn add bcryptjs
+y con hashSync(value) ya va a generar una salt de 10 rounds,no hace falta usar genSalt:
+password: bcrypt.hashSync("123456") <- si diera fallo pasar un 10 como 2o arg.
 
