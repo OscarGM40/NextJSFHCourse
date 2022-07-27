@@ -578,3 +578,113 @@ yarn add bcryptjs
 y con hashSync(value) ya va a generar una salt de 10 rounds,no hace falta usar genSalt:
 password: bcrypt.hashSync("123456") <- si diera fallo pasar un 10 como 2o arg.
 
+				VIDEO 259 CREAR ENDPOINT PARA LA AUTH
+
+Creamos un file en pages/api/user/login para el login:
+
+export default function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) {
+  const { method } = req;
+
+  switch (method) {
+    case 'POST':
+      return loginUser(req, res);
+    default:
+      return res.status(400).json({ message: 'Bad request' });
+  }
+}
+
+					VIDEO 260 CONTROLADOR PARA LA AUTH
+
+Realmente es lo mismo de siempre,comprobar el email,comparar las passwords y generar el token.Usaremos jsonwebtoken y un helper:
+
+export const signToken = (_id: string, email: string) => {
+  if (!process.env.JWT_SECRET_SEED) {
+    throw new Error('No hay semilla de JWT - revisar archivo env');
+  }
+  return jwt.sign({ _id, email }, process.env.JWT_SECRET_SEED, {
+    expiresIn: '7d',
+  });
+};
+
+Recuerda que hay que bajar el servidor de desarrollo para que coga los cambios en ciertos archivos.
+
+				VIDEO 261 REGISTRO DE UN USUARIO
+
+Para el registro habrá que mirar por el campo unico que suele ser el email,aparte es muy parecido,además,aqui vendrán validaciones:
+
+ const newUser = new UserModel({
+    email: email.toLowerCase(),
+    password: bcrypt.hashSync(password),
+    role: 'client',
+    name,
+  });
+
+  try {
+    await newUser.save({ validateBeforeSave: true });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: 'Revisar logs del servidor' });
+  }
+
+  const { _id, role } = newUser;
+  const token = jwt.signToken(_id, email);
+
+				VIDEO 263 VALIDAR Y REVALIDAR JWT
+
+Bien,lo primero es verificar el token,creando su helper.Fijate que la libreria jwt no trabaja con promesas y tengo que usar jwt.verify(token,semilla, (error,payload) => { ... } <- es decir,tengo que usar el tercer argumento:
+
+export const isValidToken = (token: string): Promise<string> => {
+  if (!process.env.JWT_SECRET_SEED) {
+    throw new Error('No hay semilla de JWT - revisar archivo env');
+  }
+  return new Promise((resolve, reject) => {
+    try {
+      jwt.verify(token, process.env.JWT_SECRET_SEED ?? '', (err, payload) => {
+        if (err) {
+          return reject('JWT no es válido');
+        }
+        const { _id } = payload as { _id: string };
+        resolve(_id);
+      });
+    } catch (error) {
+      console.log(error);
+      return reject('JWT no es válido');
+    }
+  });
+};
+
+			VIDEO 264 FORMULARIO DE LOGIN - UI + REACT HOOK FORMS
+
+Es hora de trabajar en la UI de los formularios de login y register.Usaremos la libreria react-hook-form(https://react-hook-form.com/get-started):
+yarn add react-hook-form
+
+Recuerda que esta libreria,si bien es simplemente seguir su doc,requiere de ciertas features a implementar:
+
+1- Ya trae su funcion submiteadora(que llamará al preventDefault).A sea funcion tengo que pasarle yo otra
+ <form onSubmit={handleSubmit(onLoginUser)}>
+
+2- tengo que crear un modelo del form,pasarlo al hook y relacionar cada campo:
+
+* Un type va perfecto
+type FormModel = {
+  email: string;
+  password: string;
+};
+el hook recibe el tipo del formulario
+const { register, handleSubmit, formState: { errors }, } = useForm<FormModel>();
+
+Cada campo se relaciona con el modelo del form:
+<TextField
+   label="Email"
+   variant="filled"
+   fullWidth
+   {...register('email')}
+
+Obviamente aún faltan las validaciones con yup,pero hemos tardado 5 minutos en enganchar un modelo al formulario.Genial esta libreria.
+
+				VIDEO 265 VALIDACIONES DEL FORM DE LOGIN
+
+

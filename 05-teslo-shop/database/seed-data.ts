@@ -36,13 +36,13 @@ export const initialData: SeedData = {
       name: 'Oscar Gonzalez',
       email: 'oscar@gmail.com',
       // fijate que no necesito generar la salt ya que va a poner una de 10 rounds por defecto,asi que directamente llamo a hashSync
-      password: bcrypt.hashSync('13456'),
+      password: bcrypt.hashSync('123456'),
       role: 'admin',
     },
     {
       name: 'Asinto Benavente',
       email: 'asinto@gmail.com',
-      password: bcrypt.hashSync('13456'),
+      password: bcrypt.hashSync('123456'),
       role: 'client',
     },
   ],
