@@ -24,31 +24,36 @@ import {
   VpnKeyOutlined,
 } from '@mui/icons-material';
 import useTranslation from 'next-translate/useTranslation';
-import { KeyboardEvent, useContext, useState } from 'react';
-import { UIContext } from '../../context';
+import { KeyboardEvent, useContext, useMemo, useState } from 'react';
+import { AuthContext, UIContext } from '../../context';
 import { useRouter } from 'next/router';
 
 export const SideMenu = () => {
   const router = useRouter();
   const { t } = useTranslation('home');
-  const {isMenuOpen,toggleSideMenu} = useContext(UIContext);
-  const [searchTerm,setSearchTerm] = useState("")
+  const { isMenuOpen, toggleSideMenu } = useContext(UIContext);
 
-  const navigateTo = (url:string) => {
+  const { isLoggedIn, user, logoutUser } = useContext(AuthContext);
+  const isAdmin = useMemo(() => user && user.role === 'admin', [user]);
+
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const navigateTo = (url: string) => {
     router.push(url);
-    toggleSideMenu()
-  }
+    toggleSideMenu();
+  };
 
   const onSearchTerm = () => {
-    if(searchTerm.trim().length === 0) return;
-    navigateTo(`/search/${searchTerm}`)
-  }
+    if (searchTerm.trim().length === 0) return;
+    navigateTo(`/search/${searchTerm}`);
+  };
 
   const onKeyUpHandler = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
-      onSearchTerm()
+      onSearchTerm();
     }
-}
+  };
+
 
   return (
     <Drawer
@@ -69,9 +74,7 @@ export const SideMenu = () => {
               onKeyUp={onKeyUpHandler}
               endAdornment={
                 <InputAdornment position="end">
-                  <IconButton
-                    onClick={onSearchTerm}
-                  >
+                  <IconButton onClick={onSearchTerm}>
                     <SearchOutlined />
                   </IconButton>
                 </InputAdornment>
@@ -79,19 +82,22 @@ export const SideMenu = () => {
             />
           </ListItem>
 
-          <ListItem button>
-            <ListItemIcon>
-              <AccountCircleOutlined />
-            </ListItemIcon>
-            <ListItemText primary={t('sideMenuProfile')} />
-          </ListItem>
-
-          <ListItem button>
-            <ListItemIcon>
-              <ConfirmationNumberOutlined />
-            </ListItemIcon>
-            <ListItemText primary={t('sideMenuMyOrders')} />
-          </ListItem>
+          {isLoggedIn && (
+            <>
+              <ListItem button>
+                <ListItemIcon>
+                  <AccountCircleOutlined />
+                </ListItemIcon>
+                <ListItemText primary={t('sideMenuProfile')} />
+              </ListItem>
+              <ListItem button>
+                <ListItemIcon>
+                  <ConfirmationNumberOutlined />
+                </ListItemIcon>
+                <ListItemText primary={t('sideMenuMyOrders')} />
+              </ListItem>
+            </>
+          )}
 
           <ListItem
             button
@@ -125,44 +131,48 @@ export const SideMenu = () => {
             </ListItemIcon>
             <ListItemText primary={t('navbarKids')} />
           </ListItem>
-
-          <ListItem button>
-            <ListItemIcon>
-              <VpnKeyOutlined />
-            </ListItemIcon>
-            <ListItemText primary={t('sideMenuSignIn')} />
-          </ListItem>
-
-          <ListItem button>
-            <ListItemIcon>
-              <LoginOutlined />
-            </ListItemIcon>
-            <ListItemText primary={t('sideMenuGoOut')} />
-          </ListItem>
+          {isLoggedIn ? (
+            <ListItem button onClick={logoutUser}>
+              <ListItemIcon>
+                <LoginOutlined />
+              </ListItemIcon>
+              <ListItemText primary={t('sideMenuGoOut')} />
+            </ListItem>
+          ) : (
+            <ListItem button onClick={ () => navigateTo(`/auth/login?p=${router.asPath}`)}>
+              <ListItemIcon>
+                <VpnKeyOutlined />
+              </ListItemIcon>
+              <ListItemText primary={t('sideMenuSignIn')} />
+            </ListItem>
+          )}
 
           {/* Admin */}
-          <Divider />
-          <ListSubheader>Admin Panel</ListSubheader>
+          {isAdmin && (
+            <>
+              <Divider />
+              <ListSubheader>Admin Panel</ListSubheader>
+              <ListItem button>
+                <ListItemIcon>
+                  <CategoryOutlined />
+                </ListItemIcon>
+                <ListItemText primary={t('sideMenuProducts')} />
+              </ListItem>
+              <ListItem button>
+                <ListItemIcon>
+                  <ConfirmationNumberOutlined />
+                </ListItemIcon>
+                <ListItemText primary={t('sideMenuOrders')} />
+              </ListItem>
 
-          <ListItem button>
-            <ListItemIcon>
-              <CategoryOutlined />
-            </ListItemIcon>
-            <ListItemText primary={t('sideMenuProducts')} />
-          </ListItem>
-          <ListItem button>
-            <ListItemIcon>
-              <ConfirmationNumberOutlined />
-            </ListItemIcon>
-            <ListItemText primary={t('sideMenuOrders')} />
-          </ListItem>
-
-          <ListItem button>
-            <ListItemIcon>
-              <AdminPanelSettings />
-            </ListItemIcon>
-            <ListItemText primary={t('sideMenuUsers')} />
-          </ListItem>
+              <ListItem button>
+                <ListItemIcon>
+                  <AdminPanelSettings />
+                </ListItemIcon>
+                <ListItemText primary={t('sideMenuUsers')} />
+              </ListItem>
+            </>
+          )}
         </List>
       </Box>
     </Drawer>

@@ -3,6 +3,7 @@ import { ICartProduct } from '../../interfaces';
 import { CartAction } from './CartReducer';
 
 interface CartProps {
+  isLoaded: boolean;
   cart: ICartProduct[];
   numberOfItems: number;
   subTotal: number;

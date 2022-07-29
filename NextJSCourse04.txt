@@ -687,4 +687,240 @@ Obviamente aún faltan las validaciones con yup,pero hemos tardado 5 minutos en 
 
 				VIDEO 265 VALIDACIONES DEL FORM DE LOGIN
 
+Fijate que Nest crea un .git al crear el proyecto.Volviendo al video,en React es bastante tedioso trabajar con los errores,hay que andar con {email.error && <span>{error.msg}</span>).
 
+React hace muy sucio los formularios,pero librerias como formik o react-hook-form arreglan esto,además,al estar con Material ya han creado propiedades como error:boolean y helperText:
+
+ <TextField
+    label="Email"
+    variant="filled"
+    fullWidth
+    {...register('email',{
+      required:'Field required',
+    })}
+    error={!!errors.email}
+    helperText={errors.email?.message}
+/>
+
+Y no solo esto,sino que puedo pasarle mis propias validaciones en la propiedad validate:
+
+       <TextField
+                label="Email"
+                variant="filled"
+                fullWidth
+                {...register('email',{
+                  required:'Field email required',
+                  validate: (val) => validations.isEmail(val)
+                })}
+                error={!!errors.email}
+                helperText={errors.email?.message}
+              />
+
+Fijate que simplemente es pasarle un string al tipo de validacion:
+        <TextField
+                label="Password"
+                type="password"
+                variant="filled"
+                fullWidth
+                {...register('password',{
+                  required:'Field password required',
+                  minLength:{value:6, message:'minimum 6 chars'}
+                })}
+                error={!!errors.password}
+                helperText={errors.password?.message}
+              /
+
+Desde luego la union de MaterialUI y react-hook-forms es superpoderosa.Claro que esto sólo es la validacion en el front.
+
+				VIDEO 266 VALIDACIONES CONTRA EL BACKEND
+
+Primero vamos a crear una instancia de axios para la app:
+
+const tesloApi = axios.create({
+  baseUrl:'/api'
+
+NOTA: fijate que puedo saber si es un error de axios con axios.isAxiosError(error):
+
+const onLoginUser: SubmitHandler<FormModel> = async ({ email, password }) => {
+    try {
+      const { data } = await tesloApi.post('/auth/login', { email, password });
+      const { token, user } = data;
+      console.log(token, user);
+      // grabar token en la cookie
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.log('AxiosError:', error);
+      }
+      console.log(error);
+    }
+
+NOTA: una petición 404 es que la ruta esta mál escrita.Bien,una vez con la petición desarollada,habrá que mostrar algo si falla el login en la UI
+
+			VIDEO 267 MOSTRAR MENSAJE DE ERROR EN PANTALLA
+
+ Simplemente creamos un state y lo actualizamos segun tenga error o no la petición de login.En base a ese boleano pintamos un chip de error,queda bastante bien.
+
+  const [showError, setShowError] = useState(false);
+
+<Chip
+    label="Usuario/contraseña no válidos"
+    color="error"
+    icon={<ErrorOutline />}
+    sx={{display:showError ? 'flex': 'none'}}
+  />
+
+El siguiente video es una tarea haciendo lo mismo para el register.Pan comido.
+
+				VIDEO 269 AUTH CONTEXT
+
+Ahora que tenemos el login y el register funcionando ocupamos hacer persistente en el estado de la app dichas acciones.Crearemos un AuthContext para ello.
+De momento solo tiene el user y un boleano:
+
+export interface AuthState {
+  isLoggedIn: boolean;
+  user?: IUser;
+}
+
+IMPORTANTE:en este punto fijate en la conveniencia de seguir el ejemplo de Fernando,creando funciones en el Provider y suministrandolas ya con la lógica de negocio.Incluso sería mejor idea sacar esas funciones del provider y abstraerlas.
+Sea como sea una aproximación parecida a la de él parece lo mejor.
+
+NOTA: fijate como lo mejor es usar async/await al llamar a otra función que usó async/await en su definición.No sé porque otros no lo hacen,me da igual,asinto.
+
+Fijate en esto:
+prop: (error.prop.prop2 as unknown as {message:string}).message
+Puedo castear lo que quiera pasando por el unknown
+
+Tras realizar ambos métodos de login y register aún faltaría persistir el estado que lo tenemos en la cookie.
+
+		VIDEO 272 RECUPERAR EL ESTADO DE AUTENTICACION DEL USUARIO
+
+Realmente es muy sencillo,ya que el controlador hace casi todo:
+
+  useEffect(() => {
+    checkToken();
+  }, []);
+
+  const checkToken = async (): Promise<boolean> => {
+    try {
+      // llamar endpoint
+      const { data } = await tesloApi.get('/user/validate-token');
+      const { token, user } = data;
+      // guardar nuevo token en cookies
+      Cookies.set('token', token);
+      // disparar login de nuevo
+      dispatch({ type: '[Auth] - Login', payload: user });
+      return true;
+    } catch (error) {
+      // si algo sale mal borrar el token de las cookies
+      Cookies.remove('token')
+      return false;
+    }
+  };
+
+Sin embargo debo observar que el efecto sin dependencias sobre el reducer va a ejecutarse una vez en cada refresh,y no más veces,y es lo que quiere Fernando.
+Además,podemos saber si el usuario está autenticado e incluso su rol antes de cada página.Estilizaremos la app en base al rol en la siguiente sección.
+
+			SECCION 17 ESTILOS CONDICIONALES SEGUN ROL
+
+Usaremos middlewares para generar páginas de manera estática y que serán protegidas por esos middlewares.
+NOTA:estos middlewares terminan siendo sustituidos por Serverless Functions en Vercel(no asi en otras plataformas,donde terminan siendo funciones que se llaman en request time,es decir,al hacer la petición).Esto es la naturaleza de un middleware,ejecutarse en request time(y no lo hace en vercel o que??)
+
+Bien,en esta sección vamos a trabajar sobre:
+
+1- Modificar los componentes basados en el rol del  usuario
+2- Realizar la persistencia de la dirección(de envio??)
+3- Generar de manera estática las páginas de
+  - Summary
+  - Address Shipping
+4- Crear middlewares de autenticación
+5- Actualizar el contexto del carrito de compra
+
+Y muchas cosas más.
+
+				VIDEO 278 ESTILO CONDICIONAL EN EL SIDEBAR
+
+Recuerda que es mejor no construir un HTML a ocultarlo.Realizo la tarea de mostrar ciertos JSX segun el role:
+
+ const { isLoggedIn, user } = useContext(AuthContext);
+  const isAdmin = useMemo(() => user && user.role === 'admin', [user]);
+
+				VIDEO 279 LOGOUT Y REGRESAR A LA ULTIMA PAGINA
+
+La funcion de logout va a ser bastante simple.Fijate en el uso de router.reload():
+
+  const logoutUser = () => {
+    Cookies.remove('token')
+    Cookies.remove('cart')
+    router.reload()
+  }
+
+Bien,para saber donde estabamos vamos a mandarlo como un query param usando el router de Next:
+<ListItem button onClick={ () => navigateTo(`/auth/login?p=${router.asPath}`)}>
+
+Y al navegar veré que voy a:
+http://localhost:3000/es/auth/login?p=/category/women
+
+Para rescatarlo basta con acceder a router.query.p(pues lo llamé p):
+
+  const destination = router.query.p?.toString() || '/'
+  router.replace(destination);
+
+Y ya que estamos pasamos el query param entre rutas:
+
+ href={router.query.p 
+         ? `/auth/register?p=${router.query.p}`
+         : '/auth/register'
+   }
+
+			VIDEO 281 MOSTRAR PAGINA DE CARRITO VACIO
+
+Recuerda que tenemos una pagina de carrito de compras vacio.Queremos redireccionar a ella si el carrito esta vacio??
+
+Asi pues creamos una propiedad nueva y voy al cartPage.Fijate que numberOfItems me va a venir bien,además de saber que ya cargó el carrito.En este punto se puede observar cuanto ayudan ciertas buenas prácticas:
+
+const CartPage = () => {
+  const { isLoaded,numberOfItems } = useContext(CartContext)
+
+Fijate que por un momento si que carga la pagina(el necesario para evaluar que no tiene items y redirigir).No queremos esto,podemos evitar que cargue algo pasandole un fragmento vacio.
+
+  if(!isLoaded || cart.length === 0){return <></>}
+
+Observa como necesita el OR.
+
+			VIDEO 282 VERIFICAR AUTENTICACION SERVER SIDE
+
+ Para verificar la autenticacion hay que leer el token de las cookies.Anterior a la version 12 se hacia con getServerSideProps,que recuerda que tiene acceso a la request y por ello vendrá el token en la request.cookies['token']:
+
+/* forma anterior a Next12 sin middlewares */
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const { token = '' } = ctx.req.cookies;
+  let isValidToken = false;
+
+  try {
+    await jwt.isValidToken(token);
+    isValidToken = true;
+  } catch (error) {
+    isValidToken = false;
+  }
+
+  if (!isValidToken) {
+    return {
+      redirect: {
+        destination: '/auth/login?p=/checkout/address',
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {},
+  };
+};
+
+Fijate que ni siquiera hace falta mandar nada,solamente con el proceso en el back es suficiente.
+Sin embargo,realizar esto hace que esta pagina pase a ser SSR,y no pueda ser estática.Esto no está mal,pero desde la v12 podemos usar un middleware y dejarla incluso de forma estática.
+
+			VIDEO 283 MIDDLEWARE DE AUTENTICACION
+
+Tener un poco de celos de cuanto más saben los demás no está mal,tio,pero tienes que juzgar si realmente estas siendo un poco celoso o mucho.¿Realmente saben tanto?¿Es tan importante esto?¿Porque no disfrutar de un gran trabajo,divertido,descansado,bien remunerado y cada uno allá con su capacidad?Además que no eres malo.
+Nota de asinto del 29 del 07 del 1443

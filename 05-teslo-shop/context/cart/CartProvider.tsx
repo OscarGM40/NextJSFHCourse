@@ -4,6 +4,7 @@ import { CartContext, cartReducer } from './';
 import Cookie from 'js-cookie';
 
 export interface CartState {
+  isLoaded: boolean;
   cart: ICartProduct[];
   numberOfItems: number;
   subTotal: number;
@@ -12,6 +13,7 @@ export interface CartState {
 }
 
 const CART_INITIAL_STATE: CartState = {
+  isLoaded: false,
   cart: Cookie.get('cart') != undefined ? JSON.parse(Cookie.get('cart')!) : [],
   numberOfItems: 0,
   subTotal: 0,
@@ -103,7 +105,7 @@ export const CartProvider: FC<CartProviderProps> = ({ children }) => {
   return (
     <CartContext.Provider
       value={{
-        ...state,
+        ...state, //fijate que esparzo las props con ...state y los methods de uno en uno
         // methods
         addProductToCart,
         updateCartQuantity,
