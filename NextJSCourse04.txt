@@ -922,5 +922,76 @@ Sin embargo,realizar esto hace que esta pagina pase a ser SSR,y no pueda ser est
 
 			VIDEO 283 MIDDLEWARE DE AUTENTICACION
 
-Tener un poco de celos de cuanto más saben los demás no está mal,tio,pero tienes que juzgar si realmente estas siendo un poco celoso o mucho.¿Realmente saben tanto?¿Es tan importante esto?¿Porque no disfrutar de un gran trabajo,divertido,descansado,bien remunerado y cada uno allá con su capacidad?Además que no eres malo.
-Nota de asinto del 29 del 07 del 1443
+Recuerda que se puede crear un middleware creando un archivo llamado _middleware.ts.Puedo crear los que necesite.Cualquier archivo que esté a la par o más adentro de la ubicación de este file llamará al código del middleware:
+
+/pages
+  index.ts
+  - /about
+    _middleware.ts
+    about.tsx <- éste llama al _middleware que tiene al lado
+    - /teams
+      _middleware.ts
+       teams.tsx < éste llama a los dos(en orden correcto,primero el de arriba)
+
+TIP: startups sobre big companies asi puedo tener mayor impacto en el producto final y operaciones del día a dia.
+Asi pues,implementemos nuestro middleware(fijate que tuve problemas con la libreria jwt y tuve que usar otra):
+
+import { NextFetchEvent, NextRequest, NextResponse } from 'next/server';
+import { jwtVerify } from 'jose';
+
+export async function middleware(req: NextRequest, ev: NextFetchEvent) {
+  let url = req.nextUrl.clone();
+  url.basePath = '/auth/login?p=';
+  url.pathname = req.page.name!;
+
+  const { token = '' } = req.cookies;
+
+  try {
+    await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET_SEED));
+    return NextResponse.next();
+  } catch (error) {
+    const url = req.nextUrl.clone();
+    // next ya ofrece una forma de navegar con NextResponse,es lo recomendado
+    // fijate que para saber la pagina lo tengo en req.page.name
+    return NextResponse.redirect(`${url.origin}/auth/login?p=${req.page.name}`);
+  }
+}
+
+Fijate que rápido ha sido comprobar(solamente en esas dos rutas del checkout además) si el token es válido.Recuerda que todo esto era para no usar SSR para hacerlo,pudiendo servir de forma estática esas dos pages.
+
+			VIDEO 284 DATOS DE LA DIRECCION DEL CLIENTE
+
+Realmente es muy fácil trabajar formularios con la libreria react-hook-form.Para el select lo podemos cambiar por un TextField,el truco estaba en eso:
+
+  <TextField
+     select
+     required
+
+				VIDEO 286 RECARGAR LA DIRECCION DE LA PERSONA
+
+Creamos un efecto en el reducer que consulte las cookies,etc:
+
+  useEffect(() => {
+    const address = getAddressFromCookies();
+    // si no viene el nombre,que era obligatorio,es que no viene el form entero
+    if (!address.firstName) return;
+    dispatch({
+      type: '[Cart] - Load address from cookie',
+      payload: address,
+    });
+  }, []);
+
+				VIDEO 287 ACTUALIZAR DIRECCION DE CONTEXTO
+
+Fijate como puedo llamar a dos case diferentes pero que hagan lo mismo.Interesante y raro:
+
+    case '[Cart] - Load address from cookie':
+    case '[Cart] - Update shipping address':
+      return {
+        ...state,
+        shippingAddress: action.payload,
+      };
+
+			VIDEO 288 MOSTRAR DIRECCION CORRECTA EN LA ORDEN
+
+

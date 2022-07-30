@@ -1,0 +1,20 @@
+					SECCION 18 NEXT-AUTH
+
+Realmente nuestra custom auth no está mal,pero Next ya provee un sistema de autenticación propio.Usaremos OAuth con Github.
+Es tan fácil que podré dejar de referencia esta auth con NextAuth para otros proyectos.Genial
+
+En esta sección, expandiremos nuestro mecanismo de autenticación con Next Auth, puntualmente veremos
+
+1- Proveedores
+2- Github como proveedor de autenticación
+3- Custom Logins
+4- Credenciales como proveedor
+5- Sessiones
+6- NextAuth JWT
+7- Verificación de sesión en el Frontend y Backend
+
+Y Más
+
+			VIDEO 294-295 INSTALAR NEXT AUTH Y CONFIGURARLO
+
+
