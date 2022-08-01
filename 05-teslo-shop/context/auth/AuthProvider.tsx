@@ -5,6 +5,7 @@ import { FC, useEffect, useReducer } from 'react';
 import { tesloApi } from '../../api';
 import { IUser } from '../../interfaces';
 import { AuthContext, authReducer } from './';
+import { signOut, useSession } from 'next-auth/react';
 
 export interface AuthState {
   isLoggedIn: boolean;
@@ -23,10 +24,18 @@ interface AuthProviderProps {
 export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, AUTH_INITIAL_STATE);
   const router = useRouter();
+  const { data, status } = useSession();
+
+/*   useEffect(() => {
+    checkToken();
+  }, []); */
 
   useEffect(() => {
-    checkToken();
-  }, []);
+    if(status === 'authenticated'){
+      // console.log(data.user)
+      dispatch({ type: '[Auth] - Login', payload: data.user as IUser });
+    }
+  },[status,data])
 
   const checkToken = async (): Promise<boolean> => {
     // si no hay un token para que mirar más?
@@ -96,10 +105,19 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logoutUser = () => {
-    Cookies.remove('token')
-    Cookies.remove('cart')
-    router.reload()
-  }
+    Cookies.remove('cart');
+    Cookies.remove('firstName');
+    Cookies.remove('lastName');
+    Cookies.remove('address');
+    Cookies.remove('address2');
+    Cookies.remove('zip');
+    Cookies.remove('city');
+    Cookies.remove('country');
+    Cookies.remove('phone');
+    signOut()
+    /* router.reload();
+    Cookies.remove('token'); */
+  };
 
   return (
     <AuthContext.Provider

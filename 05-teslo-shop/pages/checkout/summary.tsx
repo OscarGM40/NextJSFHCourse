@@ -12,9 +12,17 @@ import useTranslation from 'next-translate/useTranslation';
 import { CartList, OrderSummary } from '../../components/cart';
 import { ShopLayout } from '../../components/layouts';
 import NextLink from 'next/link';
+import { CartContext } from '../../context';
+import { useContext } from 'react';
+import { COUNTRIES } from '../../utils';
 
 const SummaryPage = () => {
+
   const { t } = useTranslation('home');
+  const { shippingAddress,numberOfItems } = useContext(CartContext);
+  
+  if(!shippingAddress){return <></>}
+  
   return (
     <ShopLayout title="Order Summary" pageDescription="Order Summary">
       <Typography variant="h1" component="h1">
@@ -28,22 +36,24 @@ const SummaryPage = () => {
           <Card className="summary-card">
             <CardContent>
               <Typography variant="h2">
-                {t('summaryPageOrder', { count: 3 })}
+                {t('summaryPageOrder', { count: numberOfItems })}
               </Typography>
               <Divider sx={{ my: 1 }} />
 
               <Box display="flex" justifyContent="space-between">
-              <Typography variant="subtitle1">Dirección de entrega</Typography>
+                <Typography variant="subtitle1">
+                  Dirección de entrega
+                </Typography>
                 <NextLink href="/checkout/address" passHref>
                   <Link underline="always">Editar</Link>
                 </NextLink>
               </Box>
 
-              <Typography>Fernando Herrera</Typography>
-              <Typography>323 Algun lugar</Typography>
-              <Typography>Stittsville, HYA 23S</Typography>
-              <Typography>Canada</Typography>
-              <Typography>+1 234781554</Typography>
+              <Typography>{`${shippingAddress?.firstName} ${shippingAddress?.lastName}}`}</Typography>
+              <Typography>{shippingAddress?.city} {shippingAddress?.zip}</Typography>
+              <Typography>{shippingAddress?.address}</Typography>
+              <Typography>{COUNTRIES.find(c => c.code === shippingAddress?.country)?.name}</Typography>
+              <Typography>{shippingAddress?.phone}</Typography>
 
               <Divider sx={{ my: 1 }} />
 

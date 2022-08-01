@@ -206,14 +206,14 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     isValidToken = false;
   }
 
-  if (!isValidToken) {
+/*   if (!isValidToken) {
     return {
       redirect: {
         destination: '/auth/login?p=/checkout/address',
         permanent: false,
       },
     };
-  }
+  } */
 
   return {
     props: {},

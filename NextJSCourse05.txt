@@ -17,4 +17,311 @@ Y Más
 
 			VIDEO 294-295 INSTALAR NEXT AUTH Y CONFIGURARLO
 
+Probablemente lo más raro de NextAuth es que tengo que crear el archivo /pages/api/auth/[...nextauth].js. Esos tres puntos indican que el nombre puede cambiar realmente,es decir,que todas las peticiones van a entrar por ahi.
 
+TIP: puedo configurar incluso que la app mande un email:
+EmailProvider({
+  server: process.env.MAIL_SERVER,
+  from: 'NextAuth.js <no-reply@example.com>'
+
+Todo esto es del lado del servidor,ojo(por eso es en /pages/api/auth).Para el lado del cliente tengo que envolver la app en un Session Provider.De esta forma proporciono la Session a toda la app:
+
+export default function App({
+...
+  return( <SessionProvider session={session}> ....
+
+despues solo hay que usar el hook useSession cuando necesite acceder a ella.
+Fijate que mis usuarios tienen un role y un mongoId.De alguna manera tendremos que hacer un puente entre las autenticaciones por redes sociales	y la custom auth,ya que necesito más de ellas.
+
+Para instalar NextAuth:
+>yarn add next-auth <- ya viene con el tipado
+
+IMPORTANTE: fijate que no me deja usar la version 18,hay que cumplir con lo que pida la instalación(la 16.13.2 me valió)
+
+				VIDEO 295 CONFIGURAR NEXTAUTH Y ENLAZAR CON GITHUB 
+
+Recuerda que hay que crear un proyecto en GitHub(ir a settings y despues a developer settings).Relleno todo y me traigo las dos keys:
+
+export default NextAuth({
+  providers: [
+    GitHubProvider({
+      clientId: process.env.GITHUB_ID!,
+      clientSecret: process.env.GITHUB_SECRET!,
+    }),
+  ],
+});
+
+Tras realizar esto fijate que su url es /api/auth/signin.Podria ir alli y logearme,aunque no podemos hacer nada más.
+
+		VIDEO 296 OBTENER INFORMACION DEL USUARIO LOGEADO POR GITHUB
+
+Debemos ser capaces de obtener la información del usuario logeado por el Provider.Desde la documentación voy al _app.ts y creo el Provider.Ahora vamos al contexto AuthProvider y llamamos al Hook:
+
+import { useSession } from 'next-auth/react';
+
+const { data, status } = useSession();
+
+en un efecto intentamos ver que es lo que trae la red social:
+
+  useEffect(() => {
+    if(status === 'authenticated'){
+      console.log(data.user)
+      // dispatch({ type: '[Auth] - Login', payload: data.user as IUser });
+    }
+  },[status,data])
+
+email: "oscargm28@hotmail.com"
+image: "https://avatars.githubusercontent.com/u/64368358?v=4"
+name: "Oscar"
+
+Obviamente no hace match con el IUser,le falta el role y el _id.De alguna manera vamos a crear tmb un usuario en la DB,pasandole una DB al Provider.
+
+			VIDEO 297 PROVEEDOR - CREDENCIALES
+
+Vamos a crear dos logins,el segundo para nuestra custom auth.Next ya tiene un provider definido para eso,es el Credentials:
+
+export default NextAuth({
+  providers: [
+    GitHubProvider({
+      clientId: process.env.GITHUB_ID!,
+      clientSecret: process.env.GITHUB_SECRET!,
+    }),
+    Credentials({ // nuestra custom auth
+      name: 'Custom Login',
+      credentials: {
+        email: {
+          label: 'Correo',
+          type: 'email',
+          placeholder: 'correo@gmail.com',
+        },
+        password: {
+          label: 'Contraseña',
+          type: 'password',
+          placeholder: 'Password',
+        },
+      },
+      async authorize(credentials) {
+        console.log(credentials);
+        return null;
+      },
+    }),
+
+NOTA: NextAuth por defecto trabaja con JWT.Antigüamente se pedia una variable de entorno para la semilla,pero desde hace tiempo se decidió que se llamaría NEXTAUTH_SECRET,asi que tengo que establecerla siempre que use NextAuth para firmar el JWT
+
+				VIDEO 298 CALLBACKS EN NEXT AUTH
+
+Puedo agregar una segunda propiedad callbacks,en la que se puede reconfigurar muchas cosas,por ejemplo,puedo acceder al token o a la sesión y manipular propiedades antes de volver a retornarlas:
+
+ // Callbacks
+  callbacks:{ 
+    // normalmente son asincronas jwt y session
+    async jwt({token,account,user}){
+      // esta callback recibe el token y me permite realizar algo,pero despues debo devolverlo de nuevo
+      return token;
+    },
+    // y de forma similar esta cb debe retornar la session,aunque permite manipulaciones antes de hacerlo
+    async session({session,token,user}){
+
+      return session
+    },
+  }
+NOTA: una autenticación con un Provider como Github tiene la propiedad account.type == 'oauth'
+
+TIP: si bien no queda muy claro porque se necesita todo lo que se necesita si algun dia necesito hacer lo mismo simplement lo copio
+
+			VIDEO 299 VERIFICAR CORREO Y CONTRASEÑA - LEER DE LA DB
+
+Creamos una funcion que compruebe si el email y la password corresponden a un usuario:
+
+export const checkUserEmailPassword = async (
+  email: string,
+  password: string
+) => {
+  await db.connect();
+  const user = await UserModel.findOne({ email: email });
+  await db.disconnect();
+
+  if (!user) {
+    return null;
+  }
+  if (!bcrypt.compareSync(password, user.password!)) {
+    return null;
+  }
+
+  const { role, name, _id } = user;
+  return {
+    _id,
+    email: email.toLowerCase(),
+    role,
+    name,
+  };
+};
+
+Juntamos los returns en el authorize del [...nextauth]:
+     async authorize(credentials) {
+        return await dbUsers.checkUserEmailPassword(credentials!.email, credentials!.password);
+      },
+Fijate que la funcion regresa null o el object con el user.Ya sólo con esto,ya estoy en el punto anterior,pues funciona perfectamente la custom Auth,aunque he tenido que usar sus estilos y url.Pero puedo ver el role,email,_id,...
+
+				VIDEO 300 SIGN OUT
+
+Simplemente llamar a su signOut
+
+			VIDEO 301 CREAR USUARIO BASADO EN OAUTH
+
+Lo primero es crear una función que compruebe si ya hay un usuario con ese email:
+
+export const oAuthToDbUser = async (oAuthEmail: string, oAuthName: string) => {
+  await db.connect();
+  const user = await UserModel.findOne({ email: oAuthEmail });
+  if (user) {
+    await db.disconnect();
+    const { role, name, email, _id } = user;
+    return { _id, email, role, name };
+  }
+  const newUser = new UserModel({
+    email: oAuthEmail,
+    name: oAuthName,
+    password: '@', // solo queremos un caracter que de fallo
+    role: 'client',
+  });
+  await newUser.save();
+  await db.disconnect();
+
+  const { role, name, email, _id } = newUser;
+  return { _id, email, role, name };
+};
+Si ya lo hay,mandamos sus datos,si no lo hay,creamos uno,lo guardamos y devolvemos los campos que se necesiten
+Y metemos en el token esta info:
+  if (account) {
+        token.accessToken = account.accessToken;
+        switch (account.type) {
+          case 'oauth':
+            // verificar si existe y si no crearlo
+            token.user = await dbUsers.oAuthToDbUser(
+              user?.email || '',
+              user?.name || ''
+            );
+            break;
+          case 'credentials':
+            token.user = user;
+            break;
+        }
+      }
+Perfectamente puedo añadir otros Providers,aunque tendré que generar un proyecto con ellos.Por último,puedo ver que tengo dos pantallas de login.Hay que arreglar esto.
+
+			VIDEO 302 LOGIN PERSONALIZADO CON NEXT AUTH
+
+De igual forma que proveen un signOut también puedo usar su signIn:
+import { signIn } from 'next-auth/react';
+
+  const onLoginUser: SubmitHandler<FormModel> = async ({ email, password }) => {
+    setShowError(false);
+
+    await signIn('credentials',{email,password})
+  };
+Fijate que le puedo pasar un Provider como primer argumento.Dado que es nuestro custom login le paso el 'credentials'.Y esta vez si,no queremos poder llegar al login si el usuario esta logeado.Para ello vamos a usar SSR y el método getSession:
+
+export default LoginPage;
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const session = await getSession({ req: ctx.req});
+
+  if (session) {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {},
+  };
+};
+
+Fijate que getSession necesitó la req:ctx.req.También recuerda que hay que especificar a Next donde setan mis custom pages de Auth.Esto se hace en la propiedad pages:
+
+  pages:{
+    signIn:'/auth/login',
+    newUser:'/auth/register'
+  }, 
+  
+			VIDEO 303 	ESPECIFICAR LA DURACION DE LA SESIÓN
+
+El super-saiyan FH tenia un problema con la duración por defecto de la sesión.Tenemos que sobresecribir esta duración con la propiedad session:
+
+  session:{
+    maxAge:2592000, // 30 days
+    strategy:'jwt',
+    updateAge: 86400 // this is for DB operations,
+
+		VIDEO 304 LOGIN PARA LOS PROVIDERS DE OAUTH 
+
+Para poder acceder a los providers también se nos suministra un método:
+import { getSession, signIn, getProviders } from 'next-auth/react';
+
+  const [providers, setProviders] = useState<any>({});
+
+  useEffect(() => {
+    getProviders().then((prov) => {
+      console.log(prov);
+      setProviders(prov);
+    });
+  }, []);
+  
+
+Despues solo es iterar filtrando por el custom,que ya lo tenemos:
+
+ {Object.values(providers)
+                .filter((p:any) => p.id !== 'credentials')
+                .map((provider: any) => {
+                return (
+                  <Button
+                    key={provider.id}
+                    variant="outlined"
+                    color="primary"
+                    sx={{mb:1}}
+                    onClick={() => signIn(provider.id)}
+                    fullWidth
+                  >{provider.name}</Button>
+                );
+              })}
+
+			VIDEO 305 NEXTJS MIDDLEWARES JUNTO A NEXTAUTH
+
+Tenemos que cambiar la forma en que nuestro middleware trabaja,ya que no vamos a tener el token en la cookie.Obviamente falla y no deja pasar(de echo se queda en bucle)
+
+Ellos recomiendan usar getToken(desde next-auth/jwt) de esta forma:
+
+import { getToken } from 'next-auth/jwt';
+
+export async function middleware(req: NextRequest, ev: NextFetchEvent) {
+  const session = await getToken({ req,secret: process.env.NEXTAUTH_SECRET });
+
+  // si no hay session se redirige al login guardando la procedencia
+  if(!session){
+    const url = req.nextUrl.clone();
+    return NextResponse.redirect(`${url.origin}/auth/login?p=${req.page.name}`);
+  }
+
+  // si si hay session dejamos pasar por el middleware
+  return NextResponse.next() 
+}
+Perfecto.
+
+		VIDEO 306 ASEGURARNOS QUE TENEMOS UNA DIRECCIÓN
+
+
+
+			SECCION 19 MANEJO Y CREACION DE ORDENES
+
+En esta sección manejaremos toda la construcción de la orden, puntualmente veremos:
+1- Creación de modelos e interfaces
+2- Generación de historial de ordenes
+3- Validar montos contra el backend
+4- Limpiar carrito de compras
+5- Grabación de orden en base de datos
+
+Este es el primer paso para llegar a generar la orden de pago.

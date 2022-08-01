@@ -994,4 +994,18 @@ Fijate como puedo llamar a dos case diferentes pero que hagan lo mismo.Interesan
 
 			VIDEO 288 MOSTRAR DIRECCION CORRECTA EN LA ORDEN
 
+Simplemente llamar al Context en summary.tsx:
 
+  const { shippingAddress,numberOfItems } = useContext(CartContext);
+  
+  if(!shippingAddress){return <></>}
+
+Fijate que tengo que contatenar alguna cosilla para mejorar la UX/UI:
+
+         <Typography>{`${shippingAddress?.firstName} ${shippingAddress?.lastName}}`}</Typography>
+              <Typography>{shippingAddress?.city} {shippingAddress?.zip}</Typography>
+              <Typography>{shippingAddress?.address}</Typography>
+              <Typography>{COUNTRIES.find(c => c.code === shippingAddress?.country)?.name}</Typography>
+              <Typography>{shippingAddress?.phone}</Typography>
+
+Por último,si el usuario está logeado no debería de poder ir al login,hay que proteger esas rutas.Lo haremos en la siguiente sección.

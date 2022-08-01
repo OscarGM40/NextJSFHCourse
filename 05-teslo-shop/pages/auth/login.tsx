@@ -3,19 +3,20 @@ import {
   Box,
   Button,
   Chip,
+  Divider,
   Grid,
   Link,
   TextField,
   Typography,
 } from '@mui/material';
+import { GetServerSideProps } from 'next';
+import { getSession, signIn, getProviders } from 'next-auth/react';
 import useTranslation from 'next-translate/useTranslation';
 import NextLink from 'next/link';
 import { useRouter } from 'next/router';
-import { useContext, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SubmitHandler, useForm } from 'react-hook-form';
-import { tesloApi } from '../../api';
 import { AuthLayout } from '../../components/layouts';
-import { AuthContext } from '../../context';
 import { validations } from '../../utils';
 
 type FormModel = {
@@ -25,20 +26,24 @@ type FormModel = {
 const LoginPage = () => {
   const { t } = useTranslation('home');
   const router = useRouter();
-  const { loginUser } = useContext(AuthContext);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<FormModel>();
-  
   const [showError, setShowError] = useState(false);
+
+  const [providers, setProviders] = useState<any>({});
+
+  useEffect(() => {
+    getProviders().then(setProviders);
+  }, []);
 
   const onLoginUser: SubmitHandler<FormModel> = async ({ email, password }) => {
     setShowError(false);
 
-    const isValidLogin = await loginUser(email, password);
+    /*     const isValidLogin = await loginUser(email, password);
 
     if (!isValidLogin) {
       setShowError(true);
@@ -49,9 +54,10 @@ const LoginPage = () => {
     }
     // redirigir al home
     const destination = router.query.p?.toString() || '/'
-    router.replace(destination);
+    router.replace(destination); */
+    await signIn('credentials', { email, password });
   };
-  
+
   return (
     <AuthLayout title="Login">
       <form onSubmit={handleSubmit(onLoginUser)} noValidate>
@@ -109,14 +115,40 @@ const LoginPage = () => {
             </Grid>
             <Grid item xs={12} display="flex" justifyContent="end">
               <NextLink
-                href={router.query.p 
-                   ? `/auth/register?p=${router.query.p}`
-                   : '/auth/register'
-                  }
+                href={
+                  router.query.p
+                    ? `/auth/register?p=${router.query.p}`
+                    : '/auth/register'
+                }
                 passHref
               >
                 <Link underline="always"> {t('loginPageRedirect')}</Link>
               </NextLink>
+            </Grid>
+            <Grid
+              item
+              xs={12}
+              display="flex"
+              flexDirection="column"
+              justifyContent="end"
+            >
+              <Divider sx={{ width: '100%', mb: 2 }} />
+              {Object.values(providers)
+                .filter((p: any) => p.id !== 'credentials')
+                .map((provider: any) => {
+                  return (
+                    <Button
+                      key={provider.id}
+                      variant="outlined"
+                      color="primary"
+                      sx={{ mb: 1 }}
+                      onClick={() => signIn(provider.id)}
+                      fullWidth
+                    >
+                      {provider.name}
+                    </Button>
+                  );
+                })}
             </Grid>
           </Grid>
         </Box>
@@ -125,3 +157,22 @@ const LoginPage = () => {
   );
 };
 export default LoginPage;
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const session = await getSession({ req: ctx.req });
+  // console.log({session});
+  const { p = '/' } = ctx.query as { p: string };
+
+  if (session) {
+    return {
+      redirect: {
+        destination: p,
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {},
+  };
+};

@@ -17,6 +17,10 @@ import { validations } from '../../utils';
 import { tesloApi } from '../../api';
 import { AuthContext } from '../../context';
 import { useRouter } from 'next/router';
+import { getSession, signIn } from 'next-auth/react';
+import { GetServerSideProps } from 'next';
+
+
 type FormRegisterModel = {
   name: string;
   email: string;
@@ -53,8 +57,9 @@ const RegisterPage = () => {
       return;
     }
     // redirigir al home
-      const destination = router.query.p?.toString() || '/'
-    router.replace(destination);
+/*       const destination = router.query.p?.toString() || '/'
+    router.replace(destination);  */
+    await signIn('credentials', { email, password });
   };
 
   return (
@@ -145,3 +150,22 @@ const RegisterPage = () => {
   );
 };
 export default RegisterPage;
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const session = await getSession({ req: ctx.req });
+  // console.log({session});
+  const { p = '/' } = ctx.query as { p: string };
+
+  if (session) {
+    return {
+      redirect: {
+        destination: p,
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {},
+  };
+};
