@@ -1,6 +1,5 @@
 import { createContext, Dispatch } from 'react';
-import { ICartProduct } from '../../interfaces';
-import { ShippingAddress } from './CartProvider';
+import { ICartProduct, ShippingAddress } from '../../interfaces';
 import { CartAction } from './CartReducer';
 
 interface CartProps {
@@ -15,6 +14,8 @@ interface CartProps {
   updateCartQuantity: (product: ICartProduct) => void;
   removeCartProduct: (product: ICartProduct) => void;
   updateAddress: (address: ShippingAddress) => void;
+  // orders
+  createOrder: () => Promise<{ hasError: boolean; message: string}>;
   dispatch: Dispatch<CartAction>;
 }
 

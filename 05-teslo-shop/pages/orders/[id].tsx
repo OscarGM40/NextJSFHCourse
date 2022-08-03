@@ -17,31 +17,50 @@ import {
   CreditCardOffOutlined,
   CreditScoreOutlined,
 } from '@mui/icons-material';
+import { GetServerSideProps, NextPage } from 'next';
+import { getSession } from 'next-auth/react';
+import { dbOrders } from '../../database';
+import { IOrder } from '../../interfaces';
 
-const OrderPage = () => {
+interface OrderProps {
+  order: IOrder;
+}
+const OrderPage: NextPage<OrderProps> = ({ order }) => {
   const { t } = useTranslation('home');
+
+  const { shippingAddress, numberOfItems, subTotal, tax, total } = order;
+
   return (
-    <ShopLayout title="Order Page" pageDescription="Order Page">
+    <ShopLayout title="Order Details" pageDescription="Order Page">
       <Typography variant="h1" component="h1">
-        Order: sdjkfkl15453
+        Order: {order._id}
       </Typography>
-      {/* <Chip sx={{my:2}} label="Pendiente de pago" variant="outlined" color="error" icon={<CreditCardOffOutlined />}/> */}
-      <Chip
-        sx={{ my: 2 }}
-        label="Orden Pagada"
-        variant="outlined"
-        color="success"
-        icon={<CreditScoreOutlined />}
-      />
-      <Grid container sx={{ mt: 2 }}>
+      {order.isPaid ? (
+        <Chip
+          sx={{ my: 2 }}
+          label="Orden Pagada"
+          variant="outlined"
+          color="success"
+          icon={<CreditScoreOutlined />}
+        />
+      ) : (
+        <Chip
+          sx={{ my: 2 }}
+          label="Pendiente de pago"
+          variant="outlined"
+          color="error"
+          icon={<CreditCardOffOutlined />}
+        />
+      )}
+      <Grid container sx={{ mt: 2 }} className="fadeIn">
         <Grid item xs={12} sm={7}>
-          <CartList editable />
+          <CartList editable={false} products={order.orderItems} />
         </Grid>
         <Grid item xs={12} sm={5}>
           <Card className="summary-card">
             <CardContent>
               <Typography variant="h2">
-                {t('summaryPageOrder', { count: 3 })}
+                {t('summaryPageOrder', { count: order.numberOfItems })}
               </Typography>
               <Divider sx={{ my: 1 }} />
 
@@ -49,39 +68,41 @@ const OrderPage = () => {
                 <Typography variant="subtitle1">
                   Dirección de entrega
                 </Typography>
-                <NextLink href="/checkout/address" passHref>
-                  <Link underline="always">Editar</Link>
-                </NextLink>
               </Box>
 
-              <Typography>Fernando Herrera</Typography>
-              <Typography>323 Algun lugar</Typography>
-              <Typography>Stittsville, HYA 23S</Typography>
-              <Typography>Canada</Typography>
-              <Typography>+1 234781554</Typography>
+              <Typography>
+                {shippingAddress.firstName} {shippingAddress.lastName}
+              </Typography>
+              <Typography>{shippingAddress.address}</Typography>
+              <Typography>{shippingAddress.zip}</Typography>
+              <Typography>{shippingAddress.country}</Typography>
+              <Typography>{shippingAddress.phone}</Typography>
 
               <Divider sx={{ my: 1 }} />
 
-              <Box display="flex" justifyContent="end">
-                <NextLink href="/cart" passHref>
-                  <Link underline="always">Editar</Link>
-                </NextLink>
-              </Box>
+              <OrderSummary
+                orderValues={{ numberOfItems, subTotal, tax, total }}
+              />
 
-              <OrderSummary />
-
-              <Box sx={{ mt: 3 }}>
-                <Button color="secondary" className="circular-btn" fullWidth>
-                  {/* TODO */}
-                  <h1>Pagar</h1>
+              <Box sx={{ mt: 3 }} display="flex" flexDirection="column">
+                {order.isPaid ? (
                   <Chip
-                    sx={{ my: 2 }}
+                    sx={{ my: 0 }}
                     label="Orden Pagada"
                     variant="outlined"
                     color="success"
                     icon={<CreditScoreOutlined />}
                   />
-                </Button>
+                ) : (
+                  <Button
+                    color="secondary"
+                    className="circular-btn"
+                    fullWidth
+                    sx={{ height: 30, fontSize: '16px' }}
+                  >
+                    Pagar
+                  </Button>
+                )}
               </Box>
             </CardContent>
           </Card>
@@ -91,3 +112,41 @@ const OrderPage = () => {
   );
 };
 export default OrderPage;
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const { id = '' } = ctx.query as { id: string };
+  const session: any = await getSession({ req: ctx.req });
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: `/auth/login?p=/orders/${id}`,
+        permanent: false,
+      },
+    };
+  }
+  // recuerda hacer el await sobre un método async,aunque él usará await tmb
+  const order = await dbOrders.getOrderById(id);
+  if (!order) {
+    return {
+      redirect: {
+        destination: `/orders/history`,
+        permanent: false,
+      },
+    };
+  }
+  // si la orden es de otro no puede verla
+  if (order.user !== session.user._id) {
+    return {
+      redirect: {
+        destination: `/orders/history`,
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {
+      order,
+    },
+  };
+};

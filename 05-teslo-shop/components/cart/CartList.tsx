@@ -12,15 +12,17 @@ import { ItemCounter } from '../ui';
 import useTranslation from 'next-translate/useTranslation';
 import { FC, useContext, useEffect, useState } from 'react';
 import { CartContext } from '../../context';
-import { ICartProduct } from '../../interfaces';
+import { ICartProduct, IOrderItem } from '../../interfaces';
 
 interface Props {
   editable?: boolean;
+  products?: IOrderItem[];
 }
-export const CartList: FC<Props> = ({ editable = 'false' }) => {
+export const CartList: FC<Props> = ({ editable = 'false', products = [] }) => {
   const { t } = useTranslation('home');
-  const { cart, updateCartQuantity,removeCartProduct } = useContext(CartContext);
-  
+  const { cart, updateCartQuantity, removeCartProduct } =
+    useContext(CartContext);
+
   const [hasMounted, setHasMounted] = useState(false);
   useEffect(() => {
     setHasMounted(true);
@@ -30,17 +32,18 @@ export const CartList: FC<Props> = ({ editable = 'false' }) => {
     product: ICartProduct,
     newQuantity: number
   ) => {
-   if (product.quantity + newQuantity === 0) return;
+    if (product.quantity + newQuantity === 0) return;
     if (product.quantity + newQuantity > product.inStock! ?? 0) return;
     product.quantity += newQuantity;
     updateCartQuantity(product);
   };
 
-
+  const productsToShow = products ? products : cart;
+  
   return (
     <>
       {hasMounted &&
-        cart.map((product) => (
+        productsToShow.map((product) => (
           <Grid
             container
             spacing={2}
@@ -71,7 +74,7 @@ export const CartList: FC<Props> = ({ editable = 'false' }) => {
                   <ItemCounter
                     currentValue={product.quantity}
                     handleQuantity={(value: number) =>
-                      onNewCartQuantityValue(product, value)
+                      onNewCartQuantityValue(product as ICartProduct, value)
                     }
                   />
                 ) : (
@@ -93,7 +96,7 @@ export const CartList: FC<Props> = ({ editable = 'false' }) => {
                 <Button
                   variant="text"
                   color="secondary"
-                  onClick={() => removeCartProduct(product)}
+                  onClick={() => removeCartProduct(product as ICartProduct)}
                 >
                   {t('cartListRemove')}
                 </Button>

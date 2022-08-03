@@ -1,9 +1,11 @@
 import { FC, useEffect, useReducer } from 'react';
-import { ICartProduct } from '../../interfaces';
+import { ICartProduct, IOrder, ShippingAddress } from '../../interfaces';
 import { CartContext, cartReducer } from './';
 import Cookie from 'js-cookie';
 import { getAddressFromCookies } from '../../pages/checkout/address';
 import Cookies from 'js-cookie';
+import { tesloApi } from '../../api';
+import axios from 'axios';
 
 export interface CartState {
   isLoaded: boolean;
@@ -15,16 +17,7 @@ export interface CartState {
   // la direccion de envio es opcional
   shippingAddress?: ShippingAddress;
 }
-export interface ShippingAddress {
-  firstName: string;
-  lastName: string;
-  address: string;
-  address2?: string;
-  zip: string;
-  city: string;
-  country: string;
-  phone: string;
-}
+
 const CART_INITIAL_STATE: CartState = {
   isLoaded: false,
   cart: Cookie.get('cart') != undefined ? JSON.parse(Cookie.get('cart')!) : [],
@@ -144,6 +137,49 @@ export const CartProvider: FC<CartProviderProps> = ({ children }) => {
     dispatch({ type: '[Cart] - Update shipping address', payload: data });
   };
 
+  const createOrder = async (): Promise<{
+    hasError: boolean;
+    message: string;
+  }> => {
+    if (!state.shippingAddress) {
+      throw new Error(
+        `No hay dirección de entrega.Imposible gestionar una orden`
+      );
+    }
+    const body: IOrder = {
+      orderItems: state.cart.map((p) => ({
+        ...p,
+        size: p.size!,
+      })),
+      shippingAddress: state.shippingAddress,
+      numberOfItems: state.numberOfItems,
+      subTotal: state.subTotal,
+      tax: state.tax,
+      total: state.total,
+      isPaid: false,
+    };
+    try {
+      const { data } = await tesloApi.post<IOrder>('/orders', body);
+      dispatch({type:'[Cart] - Order complete'})
+      return {
+        hasError: false,
+        message: data._id!,
+      };
+    } catch (error) {
+      console.log({ error });
+      if (axios.isAxiosError(error)) {
+        return {
+          hasError: true,
+          message: (error.response?.data as { message: string }).message,
+        };
+      }
+      return {
+        hasError: true,
+        message: 'Server Error,please see server logs',
+      };
+    }
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -153,6 +189,7 @@ export const CartProvider: FC<CartProviderProps> = ({ children }) => {
         updateCartQuantity,
         removeCartProduct,
         updateAddress,
+        createOrder,
         dispatch,
       }}
     >

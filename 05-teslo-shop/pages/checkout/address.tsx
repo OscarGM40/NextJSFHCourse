@@ -1,21 +1,35 @@
+import { yupResolver } from '@hookform/resolvers/yup';
 import {
   Box,
   Button,
   FormControl,
+  FormHelperText,
   Grid,
+  InputLabel,
   MenuItem,
+  Select,
   TextField,
-  Typography,
+  Typography
 } from '@mui/material';
 import Cookies from 'js-cookie';
-import { GetServerSideProps } from 'next';
 import useTranslation from 'next-translate/useTranslation';
 import { useRouter } from 'next/router';
 import { useContext, useEffect, useState } from 'react';
-import { SubmitHandler, useForm } from 'react-hook-form';
+import { Controller, SubmitHandler, useForm } from 'react-hook-form';
+import * as yup from 'yup';
 import { ShopLayout } from '../../components/layouts';
 import { CartContext } from '../../context';
-import { COUNTRIES, jwt } from '../../utils';
+import { COUNTRIES } from '../../utils';
+
+let schema = yup.object().shape({
+  firstName: yup.string().required('the field is required'),
+  lastName: yup.string().required('the field is required'),
+  address: yup.string().required('the field is required'),
+  zip: yup.string().required('the field is required'),
+  city: yup.string().required('the field is required'),
+  country: yup.string().required('the field is required'),
+  phone: yup.string().required('the field is required'),
+});
 
 type FormModel = {
   firstName: string;
@@ -45,23 +59,25 @@ const AddressPage = () => {
   const { t } = useTranslation('home');
 
   const router = useRouter();
-  const {updateAddress } = useContext(CartContext)
-  
+  const { updateAddress } = useContext(CartContext);
+
   const [hidrated, setHidrated] = useState(false);
   useEffect(() => {
     setHidrated(true);
   }, []);
-  
+
   const {
+    control,
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<FormModel>({
-    defaultValues: getAddressFromCookies(),
+    resolver: yupResolver(schema),
+    defaultValues: { ...getAddressFromCookies() },
   });
 
   const onCheckCart: SubmitHandler<FormModel> = async (data) => {
-    updateAddress(data)
+    updateAddress(data);
     router.push('/checkout/summary');
   };
 
@@ -144,26 +160,24 @@ const AddressPage = () => {
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <TextField
-                    select
-                    required
-                    variant="filled"
-                    label={t('adressPageCountry')}
-                    value={getAddressFromCookies().country}
-                    {...register('country', {
-                      required: 'Field country required',
-                    })}
-                    error={!!errors.country}
-                    helperText={errors.country?.message}
-                  >
-                    {COUNTRIES.map((country) => (
-                      <MenuItem key={country.name} value={country.code}>
-                        {country.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </FormControl>
+                <Controller
+                  name="country"
+                  control={control}
+                  defaultValue={''}
+                  render={({ field }) => (
+                    <FormControl fullWidth error={!!errors.country}>
+                      <InputLabel>Country</InputLabel>
+                      <Select {...field} label="Country">
+                        {COUNTRIES.map((country) => (
+                          <MenuItem key={country.code} value={country.code}>
+                            {country.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                      <FormHelperText>{errors.country?.message}</FormHelperText>
+                    </FormControl>
+                  )}
+                />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -194,30 +208,4 @@ const AddressPage = () => {
     </>
   );
 };
-/* forma anterior a Next12 sin middlewares */
-export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const { token = '' } = ctx.req.cookies;
-  let isValidToken = false;
-
-  try {
-    await jwt.isValidToken(token);
-    isValidToken = true;
-  } catch (error) {
-    isValidToken = false;
-  }
-
-/*   if (!isValidToken) {
-    return {
-      redirect: {
-        destination: '/auth/login?p=/checkout/address',
-        permanent: false,
-      },
-    };
-  } */
-
-  return {
-    props: {},
-  };
-};
-
 export default AddressPage;

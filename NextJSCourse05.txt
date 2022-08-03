@@ -313,6 +313,35 @@ Perfecto.
 
 		VIDEO 306 ASEGURARNOS QUE TENEMOS UNA DIRECCIÓN
 
+IMPORTANTE: fijate que para usar yup tuve que instalar:
+1 STEP
+npm install react-hook-form @hookform/resolvers yup
+
+2 STEP
+Despues los importo asi:
+import * as yup from 'yup';
+import { yupResolver } from '@hookform/resolvers/yup';
+
+3 STEP
+Defino un objeto Schema:
+let schema = yup.object().shape({
+  firstName: yup.string().required('the field is required'),
+  lastName: yup.string().required('the field is required'),
+  address: yup.string().required('the field is required'),
+  zip: yup.string().required('the field is required'),
+  city: yup.string().required('the field is required'),
+  country: yup.string().required('the field is required'),
+  phone: yup.string().required('the field is required'),
+});
+
+4 STEP
+Y se lo paso en la propiedad resolvers al hook useForm:
+const { control, register, handleSubmit, formState: { errors }, }
+= useForm<FormModel>({
+    resolver: yupResolver(schema),
+    defaultValues: { ...getAddressFromCookies() },
+  });
+Desde luego es sencillisimo implementar estas validaciones.
 
 
 			SECCION 19 MANEJO Y CREACION DE ORDENES
@@ -325,3 +354,212 @@ En esta sección manejaremos toda la construcción de la orden, puntualmente ver
 5- Grabación de orden en base de datos
 
 Este es el primer paso para llegar a generar la orden de pago.
+
+			VIDEO 312 MODELO E INTERFAZ PARA UNA ORDEN
+
+Crear esto nos va a dar contexto sobre como lucirá una orden.Fijate que el modelo usa referencias a otras colecciones usando Schema.Types.ObjectId y ref:
+
+const orderSchema = new Schema(
+  {
+    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    orderItems: [
+      {
+        _id: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+        title: { type: String, required: true },
+        size: { type: String, required: true },
+        quantity: { type: String, required: true },
+        slug: { type: String, required: true },
+        image: { type: String, required: true },
+        price: { type: String, required: true },
+      },
+    ],
+Si bien tiene un tamaño medio es bastante sencillo
+
+			VIDEO 313 ENDPOINT PARA CREAR UNA ORDEN 
+
+Simulamos la compra de varios articulos y vamos hasta confirmar orden.Es en este botón donde hay que llamar al endpoint.
+Verificaremos en el backend los precios de nuevo,realmente vamos a ignorar el front pues puede modificarse.
+
+NOTA: fijate que para comprobar un ObjectId vs un id como string tengo que parsear el ObjectId con new mongoose.Types.ObjectId(p._id).toString().Perfecto:
+
+   const currentPrice = dbProducts.find(
+        (p) => new mongoose.Types.ObjectId(p._id).toString() === curr._id
+      )?.price;
+
+Bien,en cuanto al servicio del controlador luciría asi:
+const createOrder = async (req: NextApiRequest, res: NextApiResponse<Data>) => {
+  const { total, orderItems } = req.body as IOrder;
+
+  // 1 verificar que hay un usuario logeado
+  const session: any = await getSession({ req });
+  if (!session) {
+    return res.status(401).json({ message: 'Unauthenticated.Go elsewhere' });
+  }
+
+  // 2 crear un arreglo con los ids de los productos a comprar
+  const productsIds = orderItems.map((p) => p._id);
+  await db.connect();
+  const dbProducts = await ProductModel.find({
+    _id: { $in: productsIds },
+  }).lean();
+
+  // 3 comprobar subTotal con los datos del back y no del front
+  try {
+    const subTotal = orderItems.reduce((prev, curr) => {
+      const currentPrice = dbProducts.find(
+        (p) => new mongoose.Types.ObjectId(p._id).toString() === curr._id
+      )?.price;
+      if (!currentPrice) {
+        throw new Error(`Verifique el carrito de nuevo.Producto no existe`);
+      }
+      return currentPrice * curr.quantity + prev;
+    }, 0);
+
+    const taxRate = Number(process.env.NEXT_PUBLIC_TAX_RATE ?? 0);
+    const backendTotal = subTotal + subTotal * taxRate;
+    if (total !== backendTotal) {
+      throw new Error(`El total no cuadra entre front y back`);
+    }
+    // 4 si llegamos aqui esta todo correcto en la orden
+    const userId = session.user._id;
+    const newOrder = new OrderModel({
+      ...req.body,
+      isPaid: false,
+      user: userId,
+    });
+    await newOrder.save();
+    return res.status(201).json(newOrder);
+  } catch (error: any) {
+    await db.disconnect();
+    console.log(error);
+    res
+      .status(400)
+      .json({ message: error.message || 'Revise logs en el servidor' });
+  }
+
+  return res.status(201).json(req.body);
+};
+
+			VIDEO 319 PREVENIR DOBLE POSTEO
+
+Vamos al Provider y hacemos que el onCreate sea un Promise que haga match con dos states del componente(fijate que inteligente fue esto).
+
+Perfectamente puedo crear dos states en cualquier componente:
+  const [isPosting, setIsPosting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+Y despues hacer que cualquier funcion retorne una Promise<hasError:boolean,message:string>(realmente son argumentos,da igual el nombre:
+ 
+  try {
+      const { data } = await tesloApi.post<IOrder>('/orders', body);
+      dispatch({type:'[Cart] - Order complete'})
+      return {
+        hasError: false,
+        message: data._id!,
+      };
+    } catch (error) {
+      console.log({ error });
+      if (axios.isAxiosError(error)) {
+        return {
+          hasError: true,
+          message: (error.response?.data as { message: string }).message,
+        };
+      }
+      return {
+        hasError: true,
+        message: 'Server Error,please see server logs',
+      };
+    }
+Obviamente,debe ser alguna acción asíncrona si uso Promises,pero fijate que puedo ignorar que sean promises y seguir haciendo match el retorno con dos states,etc.
+
+También creamos una nueva action que limpie el cart
+    case '[Cart] - Order complete':
+      return {
+        ...state,
+        cart:[],
+        numberOfItems: 0,
+        subTotal:0,
+        tax:0,
+        total:0
+      }
+
+				VIDEO 321 OBTENER UNA ORDEN POR ID
+
+Usando SSR en la pagina de orders/:id me paso la orden por props:
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const { id = '' } = ctx.query as { id: string };
+  const session: any = await getSession({ req: ctx.req });
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: `/auth/login?p=/orders/${id}`,
+        permanent: false,
+      },
+    };
+  }
+  // recuerda hacer el await sobre un método async,aunque él usará await tmb
+  const order = await dbOrders.getOrderById(id);
+  if (!order) {
+    return {
+      redirect: {
+        destination: `/orders/history`,
+        permanent: false,
+      },
+    };
+  }
+  // si la orden es de otro no puede verla
+  if (order.user !== session.user._id) {
+    return {
+      redirect: {
+        destination: `/orders/history`,
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {
+      order,
+    },
+  };
+};
+
+				VIDEO 322 MOSTRAR ORDEN EN PANTALLA
+
+Fijate como puedo desestructurar desde un ternario(o desestructuro de uno o de otro).Obviamente ambos objetos, orderValues y el Context tienen las props:
+
+  const { numberOfItems, subTotal, tax, total } = orderValues ? orderValues : useContext(CartContext);
+
+Muy pro desestructurar desde el Context o las props
+
+				VIDEO 324 HISTORIAL DE ORDENES
+
+Creamos un helper que busque las ordenes por id,el cual podemos sacar de la session con getSession({req:ctx.req}):
+
+export const getOrdersByUser = async (userId: string): Promise<IOrder[]> => {
+  if (!isValidObjectId(userId)) {
+    return [];
+  }
+  await db.connect();
+  const orders = await OrderModel.find({ user: userId }).lean();
+  await db.disconnect();
+
+  return JSON.parse(JSON.stringify(orders));
+};
+
+Desde aqui ya tenemos todo.En la proxima seccion veremos como pagar con PayPal.
+
+			SECCION 20 PAGOS CON PAYPAL Y TARJETA DE CREDITO
+
+Esta sección está enfocada en realizar los cobros utilizando PayPal y Tarjetas de Crédito utilizando PayPal también. Específicamente:
+
+1- Botones de cobro de Paypal y tarjeta de credito
+2- REST Endpoints de cobros
+3- Validar pago contra PayPal
+4- Información de cómo se pagó una orden
+5- Tokens de autenticación
+  a- Basic
+  b- Bearer
+6- Procesos automáticos después del cobro
+
