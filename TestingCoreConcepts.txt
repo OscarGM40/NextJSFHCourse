@@ -1,0 +1,222 @@
+								TESTING CON JEST 
+
+Recuerda que tengo jest.fn() y jest.spyOn(obj,'function') para mockear funciones.El segundo necesita un objeto o un file y la función.Permite espiar(no cambiar la funcionalidad de la funcion):
+
+test('stub.toBeCalled', () => { 
+  const stub = jest.fn() <- mokeo la funcion stub
+  stub();
+  expect(stub).toHaveBeenCalled() <- pasará pues acabo de llamarlo
+});
+
+cont myObj = {
+  doSomething(){...}
+}
+test('spyOn.toHaveBeenCalled', () => {
+  const somethingSpy = jest.spyOn(myObj,'doSomething');
+  myObj.doSomething(); <- fijate que esto esta hardcodeado
+  expect(somethingSpy).toHaveBeenCalled;
+});
+
+NOTA:el espia no reemplaza lo que va a hacer doSomething,es decir,que la función va a ejecutar la lógica que iría a hacer.
+Si no quiero que la función realmente se llame puedo sobrescribir lo que va a hacer el spia(su implementación),con spyOn().mockImplementation();
+
+const myObj = {
+  doSomething() {}
+}
+
+test('spyOn.mockImplementation', () => {
+  const spy = jest.spyOn(myObj,'doSomething').mockImplementation(() => 4) 
+  myObj.doSomething() <- retornará un 4,sin importar lo que hacia realmente
+  expect(spy).toHaveBeenCalled() <- ya no va a ejecutar la lógica.Genial
+
+NOTA: mockReturnValue() hace lo mismo que mockImplementation().Además,hay bastantes formas de implementaciones(mockReturnValueOnce,etc...)
+
+test('spyOn.mockReturnValue', () => {
+  const somethingSpy = jest.spyOn(myObj,'doSomething').mockReturnValue(); <-igual que si fuera mockImplementation.Fiate que esta fn devuelve undefined
+  myObj.doSomething()
+  expect(somethingSpy).toHaveBeenCalled() <- igual que el anterior,ahora será una función vacia el espia.Importante.  
+
+let count = 0;
+const counter = {
+  increment(){count += 1},
+  getCount(){ return count}
+}
+
+const app = (counter) => {
+   counter.increment();
+}
+
+test('app with mock counter must have been called 1 time', () => {
+  const mockCounter = {
+    increment: jest.fn()
+    get: jest.fn() <- puedo crear el objeto y usar jest.fn o un espia,realmente
+}
+  app(mockCounter) <- fijate que le paso un counter fake
+  expect(mockCounter.increment).toHaveBeenCalledTimes(1);
+
+test('app with jest.spyOn(counter) <- same as before, () => {
+  const incrementSpy = jest.spyOn(counter,'increment')
+  app(counter);
+  expect(incrementSpy).toHaveBeenCalledTimes(1)
+
+IMPORTANTE: con jest.fn() no sabré que valor tiene count,nunca tendré acceso a la funcionalidad original salvo que use un espia.Es por esto que si necesito llamar a la función y ver si realmente count sube a 1 tengo que usar el spyOn(y además sin llamar a mockImplementation()
+Y recuerda que por defecto son funciones vacias(retornan undefined)
+
+
+test('app() with jest.spyOn(counter) should increment count', () => {
+  expect(counter.getCount).toEqual(1);
+
+IMPORTANTE:a la hora de realizar varios imports recuerda que tengo la opcion de addAllMissingImports,no vayas de uno en uno.
+
+También tengo matchers como toHaveBeenCalledWith:
+
+let state = 0;
+const counter = {
+  add(val) { state += val;}
+  getCount(){ return state;}
+}
+
+const singleAdd = (counter) => {
+  counter.add(10)
+}
+
+test('singleAdd with jest.fn()', () => {
+  const mockedCounter = {
+   add = jest.fn()
+ singleAdd(mockedCounter)
+  expect(mockedCounter.add).toHaveBeenCalledWith(10) <- perfecto
+
+test('singleAdd with jest.spyOn', () => {
+  const addSpy = jest.spyOn(counter,'add')
+  singleAdd(counter)
+  expect(addSpy).toHaveBeenCalledWith(10);
+
+  expect(obj).toEqual(expect.objectContaining({
+  id:1,
+  name: 'Hugo'
+)}
+
+Y acuerdate de expect.objectContaining y expect.arrayContaining como matchers para objetos y arreglos
+
+NOTA: jest.fn(implementation) is a shorthand for jest.fn().mockImplementation(implementation).
+
+const mockFn = jest.fn(scalar => 42 + scalar); <- igual que jest.fn().mockImplementation(scalar 42 + scalar);
+mockFn(0) <- daría 42
+mockFn.mockImplementation(scalar => 36 + scalar) <- sobreescribo la impl
+mockFn(0) <- daría 36
+Como resumen observo y memorizo que jest.fn y jest.spyOn mockean una fn,pero spyOn respeta lo que iba a hacer la fn.
+
+Tip: mockFn.mockResolvedValue(value) es un syntactic sugar para Promises(no confundir con mockReturnValue,éste es mockResolvedValue:
+
+jest.fn().mockResolvedValue(value) es lo mismo que:
+jest.fn().mockImplementation( () => Promise.resolve(value)) <- interesante
+
+Además, al ser una Promise obliga al test a usar async:
+  const asyncMock = jest.fn().mockResolvedValue(43)
+  await asyncMock() <- 43
+Desde luego hay muchas mas como mockFn.mockRejectedValue para:
+jest.fn().mockImplementation( () => Promise.reject(value));
+
+IMPORTANTE: jest.fn realmente es jest.fn<T>() donde le puedo pasar un tipo
+test('passing a type to jest.fn', () => {
+  const mockAdd = jest.fn<typeof add>();
+  mockAdd.mockImplementation( (a,b) => a + b)
+
+
+JEST.MOCKED(item,profundity): al igual que tengo jest.fn | jest.spyOn para funciones tmb tengo jest.mocked para objetos(y arreglos??),y además no debo confundir con jest.mock para modulos.
+
+Sintaxis: Jest.mocked<T>(item:T,deep:boolean);
+
+En el file foo.ts tengo un obj asi:
+
+export const fooObj = {
+  a: {
+    b:{
+      c:{
+        hello:(name:string) => `Hello, ${name}`
+
+ name: () => 'foo'
+ }
+
+En el test foo.spec.ts 
+import { foo } from './foo';
+jest.mock('./foo'); <- mockeo el modulo,pero no haria falta,no??
+
+// mockeo profundo de la variable foo
+const mockedFoo = jest.mocked(foo,true);
+
+test('deep', () => {
+  mockedFoo.a.b.c.hello('me');
+  expect(mockedFoo.a.b.c.hello.mock.calls).toHaveLength(1)
+});
+
+test('direct', () => {
+  foo.name()
+  // fijate que llamamos al foo original,aunque jest.mock lo vació??
+  //sea como sea obviamente he llamado a jest.mock(foo.name).mock.calls === 1
+  expect(jest.mocked(foo.name).mock.calls).toHaveLength(1)
+
+En resumen:
+jest.fn() <- mockea una funcion
+jest.spyOn() <- espia o mockea
+jest.mock() <- mockea un modulo
+jest.mocked() <- mockea un objeto
+
+JEST.MOCK(module): Esta funcion mockea todas las funciones del file del argumento
+Imaginando que tengo dos files,uno el app.ts y otro math.ts,en el cual hay funciones que son llamadas por ese app.ts y que para testear no necesito saber que hacen originalmente las funciones de math puedo mockear todo el modulo math:
+
+Esto sería la forma larga,sin jest.mock:
+
+en el test de app.test.ts:
+import * as app from "./app";
+import * as math from "./math";
+
+math.add = jest.fn()
+math.substract = jest.fn()
+
+
+Y ya realizar los test sobre app.Pero esto no es común ni eficientep porque jest.mock me va automáticamente a iterar por cada funcion que haya en ese file y aplicarle jest.fn() para cada función del file.Es decir,no tiene sentido que mockee las funciones una a una.
+
+Asi pues usar jest.mock('./math.js') es como hacer:
+export const add      = jest.fn();
+export const subtract = jest.fn();
+export const multiply = jest.fn();
+export const divide   = jest.fn();
+
+Fijate que jest.mock automáticamente también hace que todas las funciones del file retornen undefined.
+IMPORTANTE: ya podria usar todas las funciones,pero además necesito el import:
+import * as math from "./math"; <- VAN JUNTAS
+jest.mock("./match.js);   <- VAN JUNTAS
+Investigar porque se suele ver jest.mock(require(path)) <- es una forma de hacer los dos pasos anteriores en uno??
+
+NOTA: jest.mock acepta un segundo argumento con el tipo de factoria(por defecto solamente le pasa jest.fn() a las funciones,pero puede que quiera que retornen algo,etc.En este caso necesita el segundo argumento(es una cb):
+
+jest.mock('../moduleName',() => {
+  return jest.fn(() => 42);
+}); <- fijate que me falta traer el file
+
+const moduleName = require('../moduleName') < -ahora si que lo he traido y la instruccion de arriba tiene validez.Fijate que simplemente he puesto una funcion por default
+moduleName() <- devolverá 42,fijate en el naming tan poco apropiado
+
+IMPORTANTE: al usar el arg factory estando en ES6 Module con además una export default en ese module se necesita especificar el boleano __esModule:true(fijate que es con ES6 MOdules y export defaults(son dos condiciones):
+
+import module, {functionRara} from '../moduleName' <- no confundas el named import del file,que es por default con la function.
+
+jest.mock('../moduleName', () => {
+  return {
+    __esModule:true,
+   default: jest.fn( () => 42), <- es necesario el default ??
+   foo: jest.fn().mockImplementationOnce(() => 43)
+
+moduleName() <- dará 42 <-confirmado que default será cuando llame a moduleName y foo cuando llame a moduleName.foo(pero como la desestructuré la llamamos con foo):
+foo() dará 43 <- claro,que no tengo que acceder con moduleName().foo pues lo traje por destructuring.Fijate que el nombre lo pilla el del file,si me hubiera traido axios:
+
+import axios from 'axios';
+jest.mock('axios', () => {
+  return {
+  __esModule:true,
+    default: jest.fn(() => "llamando a axios"
+ 
+}})
+Cuando llame a axios() asi me va a devolver el literal ?? Investigar más sobre jest.mock
+

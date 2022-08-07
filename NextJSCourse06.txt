@@ -1,0 +1,217 @@
+				SECCION 21 ADMIN DASHBOARD
+
+El objetivo de esta sección es el panel administrativo, crearemos las pantallas de:
+
+1- Ordenes
+2- Usuarios
+3- Dashboard informativo
+
+Crearemos un nuevo Layout para la parte administrativa y aplicaremos las validaciones respectivas para los nuevos endpoints y páginas para que solo Administradores puedan ingresar.
+
+			VIDEO 344 ADMIN DASHBOARD LAYOUT
+
+NOTA: recuerda que en un customHook puedo tener cuantos useState o useEffect quiera,y devolver lo que quiera:
+
+const customFetchHook = (url:string) => {
+   const [data,setData] = useState(null)
+   const [isLoading,setIsLoading] = useState(false)
+
+  useEffect( () => {
+    setIsLoading(true)
+    fetch(url).then( data => setData(data);
+    setIsLoading(false)
+},[])
+
+return { data,isLoading }
+
+TEngo dos states,un efect y retorno sólo lo que quiero.Deberia usar más custom hooks.Fijate que me valen para quitar responsabilidad(SRP)
+
+Volviendo a la sección,usaremos middlewares para comprobar el role,ya que esta zona es sólo para admins.
+
+En cuanto a la tarea,fijate que puedo llamar como quiera al argumento posicional del Promise.all asi que lo mejor es que me haga match:
+  
+const [
+    numberOfOrders,
+    paidOrders,
+    numberOfClients,
+    numberOfProducts,
+    productsWithNoInventory,
+    lowInventory,
+  ] = await Promise.all([
+    OrderModel.count(),
+    OrderModel.find({ isPaid: true }).count(),
+    UserModel.find({ role: 'client' }).count(),
+    ProductModel.count(),
+    ProductModel.find({ inStock: 0 }).count(),
+    ProductModel.find({ inStock: { $lte: 10 } }).count(),
+  ]);
+
+			VIDEO 348 MOSTRAR STATISTICS EN EL DASHBOARD
+
+Vamos a volver a usar el hook SWR,también crearemos un intervalo para el update:
+
+const { data, error } = useSWR<DashboardSummaryResponse>(
+    '/api/admin/dashboard',
+    {
+      refreshInterval: 30 * 1000, // 30 segundos,viene en ms
+    }
+  );
+
+  const [refreshIn, setRefreshIn] = useState(30);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshIn((refreshIn) => (refreshIn > 0 ? refreshIn - 1 : 30));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+Fijate que fácil es con esta libreria realizar peticiones cada X tiempo
+
+			VIDEO 349 MIDDLEWARES PARA VALIDAR AUTENTICACIÓN
+
+Ahora mismo no tenemos protección sobre /admin/dashboard.Vamos a proteger tanto la pagina como el REST API.Realmente es solo comprobar el role:
+
+export async function middleware(req: NextRequest, ev: NextFetchEvent) {
+  const session: any = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+  // console.log({session})
+
+  if (!session) {
+    const url = req.nextUrl.clone();
+    const requestedPage = req.page.name;
+    url.pathname = `/auth/login`;
+    url.search = `?p=${requestedPage}`;
+    return NextResponse.redirect(url);
+  }
+
+  const validRoles = ['admin', 'superuser'];
+
+  if (!validRoles.includes(session.user.role)) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/';
+    return NextResponse.redirect(url);
+  }
+  // si si es admin o superuser,etc puede pasar
+  return NextResponse.next();
+}
+
+Y para el middleware para un REST obviamente no va a haber redirects,es incluso más sencillo,solo hay que mandar un JSON de vuelta:
+
+export async function middleware(req: NextRequest, ev: NextFetchEvent) {
+  const session: any = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+  // console.log({session})
+  
+  if (!session) {
+    return new Response(
+      JSON.stringify({
+        message: 'No autenticado',
+      }),
+      {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+
+  const validRoles = ['admin', 'superuser'];
+
+  if (!validRoles.includes(session.user.role)) {
+    return new Response(
+      JSON.stringify(
+        {
+          message: 'No autorizado',
+        },
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+    );
+  }
+
+			VIDEO 350 REST - MANTENIMIENTO DE USUARIOS
+
+Creamos un endpoint en pages/api/admin/users.ts:
+
+type Data = 
+| { message: string }
+| IUser[]
+
+export default function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) {
+  switch (req.method) {
+    case 'GET':
+      return getUsers(req, res);
+    case 'PUT':
+      return updateUser(req, res);
+    default:
+      res.status(400).json({ message: 'Bad request' });
+  }
+}
+const getUsers = async(req: NextApiRequest, res: NextApiResponse<Data>)=> {
+  await db.connect();
+  const users = await UserModel.find().select('-password').lean();
+  await db.disconnect();
+  
+  return res.status(200).json(users)
+}
+
+La funcion de update solo permite cambiar el role.
+
+		VIDEO 351 MOSTRAR LISTADO CON TODOS LOS USUARIOS DE LA PLATAFORMA
+
+Fijate que fácil es crear una tabla con la libreria data-grid.Realmente sólo tengo que definir las columnas y planchar esa definición con valores:
+
+
+  // siempre hay que definir los headers y las columnas,y planchar este array con valores que hagan match con lo que defina(Array<{email,name,role}>)
+  const columns: GridColDef[] = [
+    { field: 'email', headerName: 'Email', width: 250 },
+    { field: 'name', headerName: t('historyPageFullName'), width: 300 },
+    { field: 'role', headerName: 'Role', width: 300 },
+  ];
+  const { data, error } = useSWR<IUser[]>('/api/admin/users');
+
+  if (!data && !error) return <></>;
+
+  // aunque no vaya a mostrar la columna ID,cada fila necesita un id único
+  const newRows: { email: string; name: string; role: string }[] = data!.map(
+    (user) => ({
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    })
+  );
+
+  return (
+    <AdminLayout
+      title="Users"
+      subtitle="Users management"
+      icon={<PeopleOutline />}
+    >
+      <Grid container className="fadeIn">
+        <Grid item xs={12} sx={{ height: 650, width: '100%' }}>
+          <DataGrid
+            rows={newRows}
+            columns={columns}
+            pageSize={10}
+            rowsPerPageOptions={[10, 20, 50, 100]}
+          />
+        </Grid>
+      </Grid>
+    </AdminLayout>
+  );
+
+Obviamente las tablas suelen ser más complejas que esto.De echo,necesitamos poder cambiar el valor del role.
+
+			VIDEO 352 CAMBIAR EL VALOR DEL ROL DEL USUARIO
+
+

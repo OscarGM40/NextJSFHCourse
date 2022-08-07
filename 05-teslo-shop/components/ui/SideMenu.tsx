@@ -16,6 +16,7 @@ import {
   AdminPanelSettings,
   CategoryOutlined,
   ConfirmationNumberOutlined,
+  DashboardOutlined,
   EscalatorWarningOutlined,
   FemaleOutlined,
   LoginOutlined,
@@ -53,7 +54,6 @@ export const SideMenu = () => {
       onSearchTerm();
     }
   };
-
 
   return (
     <Drawer
@@ -139,7 +139,10 @@ export const SideMenu = () => {
               <ListItemText primary={t('sideMenuGoOut')} />
             </ListItem>
           ) : (
-            <ListItem button onClick={ () => navigateTo(`/auth/login?p=${router.asPath}`)}>
+            <ListItem
+              button
+              onClick={() => navigateTo(`/auth/login?p=${router.asPath}`)}
+            >
               <ListItemIcon>
                 <VpnKeyOutlined />
               </ListItemIcon>
@@ -152,12 +155,20 @@ export const SideMenu = () => {
             <>
               <Divider />
               <ListSubheader>Admin Panel</ListSubheader>
+
+              <ListItem button onClick={() => navigateTo('/admin')}>
+                <ListItemIcon>
+                  <DashboardOutlined />
+                </ListItemIcon>
+                <ListItemText primary="Dashboard" />
+              </ListItem>
               <ListItem button>
                 <ListItemIcon>
                   <CategoryOutlined />
                 </ListItemIcon>
                 <ListItemText primary={t('sideMenuProducts')} />
               </ListItem>
+
               <ListItem button>
                 <ListItemIcon>
                   <ConfirmationNumberOutlined />
@@ -165,7 +176,7 @@ export const SideMenu = () => {
                 <ListItemText primary={t('sideMenuOrders')} />
               </ListItem>
 
-              <ListItem button>
+              <ListItem button onClick={() => navigateTo('/admin/users')}>
                 <ListItemIcon>
                   <AdminPanelSettings />
                 </ListItemIcon>

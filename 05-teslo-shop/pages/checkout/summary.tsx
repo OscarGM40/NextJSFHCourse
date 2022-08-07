@@ -52,6 +52,7 @@ const SummaryPage = () => {
       <Grid container sx={{ mt: 2 }}>
         <Grid item xs={12} sm={7}>
           <CartList editable />
+          
         </Grid>
         <Grid item xs={12} sm={5}>
           <Card className="summary-card">

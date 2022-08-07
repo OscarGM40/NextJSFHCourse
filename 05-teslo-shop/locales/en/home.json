@@ -53,5 +53,14 @@
   "loginPageTitle": "Sign In",
   "loginPageRedirect": "¿Don't have an account?",
   "registerPageTitle": "Sign Up",
-  "registerPageRedirect": "¿Already have an account?Sign in here"
+  "registerPageRedirect": "¿Already have an account?Sign in here",
+  "dashboardStats":"General statistics",
+  "dashboardTotalOrders":"Total Orders",
+  "dashboardPaidOrders":"Paid Orders",
+  "dashboardPendingOrders":"Pending Orders",
+  "dashboardClients":"Clients",
+  "dashboardProducts":"Products",
+  "dashboardOutOfStock":"Out of Stock",
+  "dashboardLowStock":"Low Stock",
+  "dashboardUpdateIn":"Update in:"
 }

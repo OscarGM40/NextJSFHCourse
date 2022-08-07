@@ -53,5 +53,15 @@
   "loginPageTitle": "Iniciar Sesión",
   "loginPageRedirect": "¿No tienes cuenta?",
   "registerPageTitle": "Registrarse",
-  "registerPageRedirect": "¿Ya tiene una cuenta?Acceder aquí"
+  "registerPageRedirect": "¿Ya tiene una cuenta?Acceder aquí",
+  "dashboardStats":"Estadisticas generales",
+  "dashboardTotalOrders":"Ordenes totales",
+  "dashboardPaidOrders":"Ordenes pagadas",
+  "dashboardPendingOrders":"Ordenes pendientes",
+  "dashboardClients":"Clientes",
+  "dashboardProducts":"Productos",
+  "dashboardOutOfStock":"Sin existencias",
+  "dashboardLowStock":"Bajo inventario",
+  "dashboardUpdateIn":"Actualización en:"
+
 }

@@ -1,34 +1,65 @@
 import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Divider,
-  Grid,
-  Link,
-  Typography,
-} from '@mui/material';
-import useTranslation from 'next-translate/useTranslation';
-import { CartList, OrderSummary } from '../../components/cart';
-import { ShopLayout } from '../../components/layouts';
-import NextLink from 'next/link';
-import {
   CreditCardOffOutlined,
   CreditScoreOutlined,
 } from '@mui/icons-material';
+import {
+  Box,
+  Card,
+  CardContent,
+  Chip,
+  CircularProgress,
+  Divider,
+  Grid,
+  Typography,
+} from '@mui/material';
+import { PayPalButtons } from '@paypal/react-paypal-js';
 import { GetServerSideProps, NextPage } from 'next';
 import { getSession } from 'next-auth/react';
+import useTranslation from 'next-translate/useTranslation';
+import { useRouter } from 'next/router';
+import { useState } from 'react';
+import { tesloApi } from '../../api';
+import { CartList, OrderSummary } from '../../components/cart';
+import { ShopLayout } from '../../components/layouts';
 import { dbOrders } from '../../database';
 import { IOrder } from '../../interfaces';
 
+export type OrderResponseBody = {
+  id: string;
+  status:
+    | 'COMPLETED'
+    | 'SAVED'
+    | 'APPROVED'
+    | 'VOIDED'
+    | 'PAYER_ACTION_REQUIRED';
+};
 interface OrderProps {
   order: IOrder;
 }
 const OrderPage: NextPage<OrderProps> = ({ order }) => {
   const { t } = useTranslation('home');
+  const router = useRouter();
 
   const { shippingAddress, numberOfItems, subTotal, tax, total } = order;
+  const [isPaying, setIsPaying] = useState(false);
+
+  const onOrderCompleted = async (details: OrderResponseBody) => {
+    if (details.status !== 'COMPLETED') {
+      return alert('No hay pago en Paypal');
+    }
+    setIsPaying(true);
+    try {
+      await tesloApi.post(`/orders/pay`, {
+        transactionId: details.id,
+        orderId: order._id,
+      });
+      router.reload();
+    } catch (error) {
+      setIsPaying(false);
+      console.log(error);
+      alert('Error');
+    }
+  };
 
   return (
     <ShopLayout title="Order Details" pageDescription="Order Page">
@@ -83,26 +114,51 @@ const OrderPage: NextPage<OrderProps> = ({ order }) => {
               <OrderSummary
                 orderValues={{ numberOfItems, subTotal, tax, total }}
               />
-
               <Box sx={{ mt: 3 }} display="flex" flexDirection="column">
-                {order.isPaid ? (
-                  <Chip
-                    sx={{ my: 0 }}
-                    label="Orden Pagada"
-                    variant="outlined"
-                    color="success"
-                    icon={<CreditScoreOutlined />}
-                  />
-                ) : (
-                  <Button
-                    color="secondary"
-                    className="circular-btn"
-                    fullWidth
-                    sx={{ height: 30, fontSize: '16px' }}
-                  >
-                    Pagar
-                  </Button>
-                )}
+                <Box
+                  display="flex"
+                  justifyContent="center"
+                  className="fadeIn"
+                  sx={{ display: isPaying ? 'flex' : 'none' }}
+                >
+                  <CircularProgress />
+                </Box>
+                <Box flexDirection="column" sx={{ display: isPaying ? 'none' : 'flex', flex: 1 }}>
+                  {order.isPaid ? (
+                    <Chip
+                      sx={{ my: 0 }}
+                      label="Orden Pagada"
+                      variant="outlined"
+                      color="success"
+                      icon={<CreditScoreOutlined />}
+                    />
+                  ) : (
+                    <PayPalButtons
+                      createOrder={(data, actions) => {
+                        return actions.order.create({
+                          purchase_units: [
+                            {
+                              amount: {
+                                value: `${order.total}`,
+                              },
+                            },
+                          ],
+                        });
+                      }}
+                      onApprove={(data, actions) => {
+                        return actions
+                          .order!.capture()
+                          .then((details) => {
+                            // console.log({ details });
+                            onOrderCompleted(details);
+                          })
+                          .catch((err) => {
+                            console.log(err);
+                          });
+                      }}
+                    />
+                  )}
+                </Box>
               </Box>
             </CardContent>
           </Card>

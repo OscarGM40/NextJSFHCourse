@@ -563,3 +563,278 @@ Esta sección está enfocada en realizar los cobros utilizando PayPal y Tarjetas
   b- Bearer
 6- Procesos automáticos después del cobro
 
+Fijate que es una buena opción para tener bien claro el flujo de pagos con PayPal,al menos volver a memorizarlo.
+
+			VIDEO 331 MODIFICACIONES ADICIONALES EN LA ORDEN
+
+Modificamos tanto el Schema como la interfaz para una Order agregando transactionId:
+
+export interface IOrder {
+  _id?: string;
+  user?: IUser | string; // puede que sea el id o todo el User
+  orderItems: IOrderItem[];
+  shippingAddress: ShippingAddress;
+  paymentResult?: string;
+  numberOfItems: number;
+  subTotal: number;
+  tax: number;
+  total: number;
+  isPaid: boolean;
+  paidAt?: string;
+  transactionId?: string;
+}
+También hacemos un toFixed(2) al total,porque PayPal dará error con muchos decimales.
+
+		VIDEO 332 PAYPAL DELEVOPER DASHBOARD- CUENTAS Y FAKE PAYPAL INTRO
+
+La URL de testing para PayPal es:
+https://developer.paypal.com/home/
+Accedo alli y me registro.Recuerda siempre estar en el modo Sandbox.Creamos una app y eligo tipo Merchant(vendedor).
+Eligo el correo janegarrapata@business.example.com y doy en crear.
+
+Se me proporcionaran los tokens publicos y privados,los guardamos
+
+NOTA: podemos ir a Sandbox/accounts y crear cuentas de comprador(personal) o vendedor(business)
+
+Recuerda cambiar la cuenta del comprador fake con una password más sencilla.
+
+			VIDEO 333 INTEGRAR BOTONES DE PAYPAL
+
+En este punto se recomienda usar una libreria para integrar los botones de paypal.Además que tiene soporte para TS hace sencillisimo usar sus botones:
+npm i @paypal/react-paypal-js
+
+Para usarlo hay que usar un Provider:
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+
+Ese provider hay que pasarle unas opciones,como el token del cliente,la currency,etc.
+
+const initialOptions = {
+    "client-id": "test",
+    currency: "USD",
+    intent: "capture",
+    "data-client-token": "abc123xyz==",
+};
+
+export default function App() {
+    return (
+        <PayPalScriptProvider options={initialOptions}>
+            <PayPalButtons />
+        </PayPalScriptProvider>
+    );
+}
+
+Fijate que incluso nos dan un useReducer con varios states:
+
+const [{ isPending }] = usePayPalScriptReducer();
+
+return (
+    <>
+        {isPending ? <div className="spinner" /> : null}
+        <PayPalButtons />
+    </>
+
+NOTA: al pagar con paypal se genera un id del pago.Ese ID lo validaremos con el backend.
+
+			VIDEO 334 VERIFICAR PAGO DESDE EL BACKEND
+
+Creo un nuevo archivo en pages/api/orders/pay.ts.Gestionaremos el POST:
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) {
+  switch (req.method) {
+    case 'POST':
+      return payOrder(req, res);
+    default:
+      return res.status(400).json({ message: 'Bad request' });
+  }
+}
+
+const payOrder = (req: NextApiRequest, res: NextApiResponse<Data>) => {
+  return res.status(200).json({ message: 'Orden pagada' });
+};
+
+IMPORTANTISIMO: Fernando provee dos urls para generar tokens(con unos minutos de validez) y para comprobar orders(las que emiten ellos).Los debo pegar en el .env:
+
+PAYPAL_OAUTH_URL=https://api-m.sandbox.paypal.com/v1/oauth2/token
+PAYPAL_ORDERS_URL=https://api.sandbox.paypal.com/v2/checkout/orders
+
+Fijate que el segundo seria checkout/orders/:id,nos falta concatenar el id de la orden que se genera al pagar.
+NOTA:el token que genera paypal es un Bearer token
+
+			VIDEO 335 PAYPAL OAUTH TOKEN -GENERAR TOKEN DE LA ORDEN
+
+Vamos a generar un token de acceso.Puedo probar en POSTMAN mandando una peticion POST con una basic auth(username es el client Id y password el secret key)
+Aun faltará mandar en un x-www-urlformencoded el grant_type con el valor de client_credentials
+
+Veré que la respuesta es un objeto con varias propiedades,una de ellas es el access_token
+NOTA: en Postman puedo ir a Code y ver lo que hay que construir en Node,Curl,Java,Python,etc...
+
+Sabiendo todo esto vamos a hacer un endpoint que devuelva esto.Fijate en el uso de Buffer.from(string,charset),de new URLSearchParams por querer usar un x-www-urlformencoded y de los headers.Muy interesante:
+
+const getPaypalBearerToken = async (): Promise<string | null> => {
+  const PAYPAL_CLIENT = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+  const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
+
+  // para crear la basic Auth hay que usar Buffer.from().Fijate en el separador(los dos puntos).Lleva un codificador en utf-8
+  const base64Token = Buffer.from(`${PAYPAL_CLIENT}:${PAYPAL_SECRET}`,'utf-8').toString('base64');
+
+  // dado que el body tiene que estar en x-www-form-urlencode tengo que construir el body con la clase URLSearchParams(string).Esto manda el string del param en base64
+  const body = new URLSearchParams('grant_type=client_credentials');
+
+  try {
+    const { data } = await axios.post(
+      process.env.PAYPAL_OAUTH_URL ?? '',
+      body,
+      {
+        headers: {
+          Authorization: `Basic ${base64Token}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      }
+    );
+    return data.access_token;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.log(error.response?.data);
+    } else {
+      console.log(error);
+    }
+    return null;
+  }
+};
+
+Ya solo falta que el endpoint nuestro llame a este método y devuelva el access_token:
+
+
+const payOrder = async (req: NextApiRequest, res: NextApiResponse<Data>) => {
+  const paypalBearerToken = await getPaypalBearerToken();
+
+  if (!paypalBearerToken) {
+    return res
+      .status(400)
+      .json({ message: 'No se pudo confirmar el token de paypala' });
+  }
+  return res.status(200).json({ message: paypalBearerToken });
+};
+
+Recuerda que este paso es fundamental,ya que mi API debe de confirmar con PayPal que efectivamente se ha pagado y no confiar más que en su API.Para ello debo generar el token de la orden y constrastarla.
+
+			VIDEO 336 CONFIRMAR ORDEN PAGADA MEDIANTE PAYPAL
+
+Para confirmar si la orden esta pagada también tenemos la url,solo que tenemos la Url sin el id en las variables de entorno(el id lo genera PayPal y viene en la respuesta,además le hemos creado el campo transactionId tmb)
+
+Asi pues mando el bearer token a por ejemplo, https://api.sandbox.paypal.com/v2/checkout/orders/1WL43029JX011835R  Veré mucha info,como la dirección,el estado del pago,la cantidad,email_address del comprador y vendedor,etc:
+
+ "id": "1WL43029JX011835R",
+    "intent": "CAPTURE",
+    "status": "COMPLETED",
+    "payment_source": {
+        "paypal": {
+            "email_address": "johngarrapata@personal.example.com",
+            "account_id": "CBJLP7VVNAGES",
+            "name": {
+                "given_name": "John",
+                "surname": "Doe"
+            },
+            "address": {
+                "country_code": "ES"
+            }
+        }
+    },
+    "purchase_units": [
+        {
+            "reference_id": "default",
+            "amount": {
+                "currency_code": "USD",
+                "value": "86.25"
+            },
+            "payee": {
+                "email_address": "janegarrapata@business.example.com",
+                "merchant_id": "ECMQA9WZEC8ES"
+            },
+            "shipping": {
+                "name": {
+                    "full_name": "John Doe"
+                },
+                "address": {
+                    "address_line_1": "calle Vilamar� 76993- 17469",
+                    "admin_area_2": "Albacete",
+                    "admin_area_1": "Albacete",
+                    "postal_code": "02001",
+                    "country_code": "ES"
+                }
+            },
+            "payments": {
+                "captures": [
+                    {
+NOTA: para poder ver lo que devuelve este endpoint tengo que mandar el token anterior como un Bearer Token(esta es un GET)
+
+DAdo que necesitamos ese transactionId lo vamos a mandar por el body del GET como un x-www-form-urlencoded:
+
+
+  const { transactionId = '', orderId = '' } = req.body;
+  // console.log({ transactionId, orderId });
+
+  const { data } = await axios.get<IPaypal.PaypalOrderStatusResponse>(
+    `${process.env.PAYPAL_ORDERS_URL}/${transactionId}`,
+    {
+      headers: { Authorization: 'Bearer ' + paypalBearerToken },
+    }
+  );
+
+  if (data.status !== 'COMPLETED') {
+    return res.status(401).json({ message: 'Orden no reconocida' });
+  }
+
+  await db.connect();
+  const dbOrder = await OrderModel.findById(orderId);
+  // console.log({dbOrder})
+  if (!dbOrder) {
+    await db.disconnect();
+    return res.status(400).json({ message: 'Orden no existe en nuestra DB' });
+  }
+
+  if (dbOrder.total !== Number(data.purchase_units[0].amount.value)) {
+    await db.disconnect();
+    return res
+      .status(400)
+      .json({ message: 'Los montos de Paypal y nuestra orden no coinciden' });
+  }
+  dbOrder.transactionId = transactionId;
+  dbOrder.isPaid = true;
+  dbOrder.save();
+
+  await db.disconnect();
+
+  return res.status(200).json({ message: 'Orden pagada' });
+};
+
+Fijate que de momento tengo que instertar manualmente el transactionId y la orderId,pero funciona correctamente esta lógica
+
+				VIDEO 337 ACTUALIZAR PANTALLA DE PAGOS
+
+Al realizar un pago correcto debemos cambiar la UI.Fijate que ya tenemos el endpoint,realmente es solo llamarlo,que estabamos haciendo un console.log:
+
+  const [isPaying, setIsPaying] = useState(false);
+
+  const onOrderCompleted = async (details: OrderResponseBody) => {
+    if (details.status !== 'COMPLETED') {
+      return alert('No hay pago en Paypal');
+    }
+    setIsPaying(true);
+    try {
+      await tesloApi.post(`/orders/pay`, {
+        transactionId: details.id,
+        orderId: order._id,
+      });
+      router.reload();
+    } catch (error) {
+      setIsPaying(false);
+      console.log(error);
+      alert('Error');
+    }
+  };
+
+Single Responsability Principle: cada clase debe tener una única responsabilidad.Es el principio más fácil de entender,y es la S en SOLID.
